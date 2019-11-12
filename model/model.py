@@ -4,10 +4,26 @@ import torch.nn.functional as F
 import torch.utils.data
 import numpy as np
 from .. import config
-from config import cfg
+
+cfg = config.cfg
+
+class PPModel(nn.Module):
+    def __init__(self,feature_net_in_channels,feature_net_out_channels,
+                 class_layer_channels,reg_layer_channels):
+        self.feature_net = PPFeatureNet(feature_net_in_channels,feature_net_out_channels)
+        self.scatter = PPScatter()
+        self.backbone = PPBackbone(feature_net_out_channels)
+        self.det_head = PPDetectionHead(2*feature_net_out_channels,class_layer_channels,
+                                        reg_layer_channels)
+    def forward(self,x,inds):
+        x = self.feature_net(x)
+        x = self.scatter(x,inds)
+        x = self.backbone(x)
+        cls_tensor,reg_tensor = self.det_head(x)
+        return (cls_tensor,reg_tensor)
 
 class PPFeatureNet(nn.Module):
-    def __init__(self,in_channels,out_channels,batch_norm,last_layer):
+    def __init__(self,in_channels,out_channels):
         super(PPFeatureNet,self).__init__()
         self.last_layer
         self.conv1 = nn.Conv2d(in_channels,out_channels,kernel_size=1)
@@ -16,8 +32,7 @@ class PPFeatureNet(nn.Module):
         x = self.conv1(x)
         x = F.relu(x)
         x = self.bn(x)
-        if self.last_layer:
-            x = torch.max(x,dim=2)[0]
+        x = torch.max(x,dim=2)[0]
         return x
 
 class PPScatter(nn.Module):
@@ -26,7 +41,7 @@ class PPScatter(nn.Module):
     
     def forward(self,x,inds):
         out_sh = x.size()
-        out = torch.zeros(out_sh[0],out_sh[1],cfg.FM_HEIGHT,cfg.FM_WIDTH)
+        out = torch.zeros(out_sh[0],out_sh[1],cfg.DATA.FM_HEIGHT,cfg.DATA.FM_WIDTH)
         non_empty = np.where(inds[:,:,0] == 1)
         x_inds = inds[non_empty][:,1]
         y_inds = inds[non_empty][:,2]

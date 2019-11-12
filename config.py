@@ -3,6 +3,8 @@ import os.path as osp
 import numpy as np
 
 cfg = edict()
+cfg.DATA = edict()
+cfg.NET = edict()
 
 # data location paramers
 cfg.DATA.ROOT_DIR = '/home/michaelregan/PointPillars'
@@ -44,6 +46,7 @@ cfg.DATA.ANCHOR_YAWS = [0,90]*cfg.DATA.NUM_CLASSES
 cfg.DATA.ANCHOR_ZS = [0]*2 +[.75]*2 + [1.5]*2 +[.75]*2 + [1.15]*2 + [.5]*2 + [1.15]*2 +[1]*2 +[1.5]*2
 cfg.DATA.MAX_POINTS_PER_PILLAR = 100
 cfg.DATA.MAX_PILLARS = 12000
+cfg.NET.REG_DIMS = 9
 cfg.DATA.IOU_POS_THRESH = .6
 cfg.DATA.IOU_NEG_THRESH = .45
 
@@ -53,3 +56,12 @@ cfg.DATA.TRAIN_DATA_FOLDER = osp.join(cfg.DATA.ROOT_DIR,'data/training_data')
 cfg.DATA.VAL_DATA_FOLDER = osp.join(cfg.DATA.ROOT_DIR,'data/validation_data')
 cfg.DATA.NAME_TO_IND = {'animal':0,'bicycle':1,'bus':2,'car':3,'emergency_vehicle':4,'motorcycle':5,'other_vehicle':6,'pedestrian':7,'truck':8}
 
+# model parameters
+
+cfg.NET.FEATURE_NET_IN = 9
+cfg.NET.FEATURE_NET_OUT = 64
+cfg.NET.BATCH_SIZE = 8
+cfg.NET.EPOCHS = 10
+cfg.NET.B_ORT = .2
+cfg.NET.B_REG = 2
+cfg.NET.B_CLS = 1
