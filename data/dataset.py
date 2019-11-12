@@ -50,7 +50,7 @@ class PPDataset(torch.utils.data.dataset):
             lidar_pointcloud.transform(car_from_sensor)
         except Exception as e:
             print('Failed to load LIDAR cloud for {}: {}:'.format(sample_token,e))
-            return None
+            return (None,None,None)
         
         lidar_points = lidar_pointcloud.points
         pillar = np.zeros((cfg.DATA.MAX_PILLARS,cfg.DATA.MAX_POINTS_PER_PILLAR,9))
@@ -69,4 +69,4 @@ class PPDataset(torch.utils.data.dataset):
                                    self.anchor_boxes,boxes)
             return (pillars,indices,target)
         
-        return (pillars,indices,None)
+        return (pillars,indices,self.token_list[ind])

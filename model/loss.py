@@ -22,8 +22,8 @@ class PPLoss(nn.Module):
         r_sh = reg_tensor.size()
 
         cls_tensor = cls_tensor.view(c_sh[0],cfg.DATA.NUM_CLASSES,
-                                     cfg.DATA.ANCHOR_DIMS,c_sh[2],c_sh[3])
-        reg_tensor = reg_tensor.view(r_sh[0],cfg.DATA.REG_DIMS,cfg.DATA.ANCHOR_DIMS,
+                                     cfg.DATA.NUM_ANCHORS,c_sh[2],c_sh[3])
+        reg_tensor = reg_tensor.view(r_sh[0],cfg.DATA.REG_DIMS,cfg.DATA.NUM_ANCHORS,
                                      r_sh[2],r_sh[3])
         cls_tensor = cls_tensor.permute(0,3,4,2,1)
         reg_tensor = reg_tensor.permute(0,3,4,2,1)

@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     fn_in = cfg.NET.FEATURE_NET_IN
     fn_out = cfg.NET.FEATURE_NET_OUT
-    cls_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.NUM_CLASSES
+    cls_channels = len(cfg.DATA.ANCHOR_DIMS)*(cfg.DATA.NUM_CLASSES + 1)
     reg_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.REG_DIMS
     
     pp_model = model.PPModel(fn_in,fn_out,cls_channels,reg_channels)
@@ -78,6 +78,8 @@ if __name__ == '__main__':
         progress_bar = tqdm(dataloader)
 
         for i,(pillars,inds,target) in enumerate(progress_bar):
+            if not pillars:
+                continue
             pillars = pillars.to(device)
             cls_tensor,reg_tensor = pp_model(pillars,inds)
             batch_loss = pp_loss(cls_tensor,reg_tensor,target)

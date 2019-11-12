@@ -23,8 +23,8 @@ cfg.DATA.X_STEP = .3
 cfg.DATA.Y_STEP = .3
 cfg.DATA.STEP = .3
 cfg.DATA.FM_SCALE = .5
-cfg.DATA.FM_HEIGHT = np.int32(((cfg.DATA.Y_MAX - cfg.DATA.Y_MIN)/cfg.DATA.Y_STEP)*FM_SCALE)
-cfg.DATA.FM_WIDTH = np.int32(((cfg.DATA.X_MAX - cfg.DATA.X_MIN)/cfg.DATA.X_STEP)*FM_SCALE)
+cfg.DATA.FM_HEIGHT = np.int32(((cfg.DATA.Y_MAX - cfg.DATA.Y_MIN)/cfg.DATA.Y_STEP)*cfg.DATA.FM_SCALE)
+cfg.DATA.FM_WIDTH = np.int32(((cfg.DATA.X_MAX - cfg.DATA.X_MIN)/cfg.DATA.X_STEP)*cfg.DATA.FM_SCALE)
 cfg.DATA.CANVAS_HEIGHT = np.int32((cfg.DATA.Y_MAX - cfg.DATA.Y_MIN)/cfg.DATA.Y_STEP) + 2
 
 animal = np.array([.5,1,.5])/cfg.DATA.STEP
@@ -44,6 +44,7 @@ cfg.DATA.ANCHOR_DIMS = [animal,animal,bicycle,bicycle,bus,bus,\
 
 cfg.DATA.ANCHOR_YAWS = [0,90]*cfg.DATA.NUM_CLASSES
 cfg.DATA.ANCHOR_ZS = [0]*2 +[.75]*2 + [1.5]*2 +[.75]*2 + [1.15]*2 + [.5]*2 + [1.15]*2 +[1]*2 +[1.5]*2
+cfg.DATA.NUM_ANCHORS = len(cfg.DATA.ANCHOR_DIMS)
 cfg.DATA.MAX_POINTS_PER_PILLAR = 100
 cfg.DATA.MAX_PILLARS = 12000
 cfg.NET.REG_DIMS = 9
@@ -55,13 +56,14 @@ cfg.DATA.NUM_WORKERS = 2
 cfg.DATA.TRAIN_DATA_FOLDER = osp.join(cfg.DATA.ROOT_DIR,'data/training_data')
 cfg.DATA.VAL_DATA_FOLDER = osp.join(cfg.DATA.ROOT_DIR,'data/validation_data')
 cfg.DATA.NAME_TO_IND = {'animal':0,'bicycle':1,'bus':2,'car':3,'emergency_vehicle':4,'motorcycle':5,'other_vehicle':6,'pedestrian':7,'truck':8}
-
+cfg.DATA.IND_TO_NAME = {0:'animal',1:'bicycle',2:'bus',3:'car',4:'emergency_vehicle',5:'motorcycle',6:'other_vehicle',7:'pedestrian',8:'truck'}
 # model parameters
 
 cfg.NET.FEATURE_NET_IN = 9
 cfg.NET.FEATURE_NET_OUT = 64
 cfg.NET.BATCH_SIZE = 8
 cfg.NET.EPOCHS = 10
+cfg.NET.NUM_WORKERS = 8
 cfg.NET.B_ORT = .2
 cfg.NET.B_REG = 2
 cfg.NET.B_CLS = 1
