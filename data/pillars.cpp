@@ -211,13 +211,15 @@ void create_pillars(py::array_t<double> &points,
                     double z_max,
                     double canvas_height)
 {
-     
+    
     boost::unordered_map<boost::array<double,2>,Pillar*> pillar_map;
+    boost::unordered_map<boost::array<double,2>,double*> means_map;
+
     for (int i=0; i < points.shape()[0];i++)
     {
-        if ((points.at(i,0) > x_max) || (points.at(i,0) < x_min) || \
-            (points.at(i,1) > y_max) || (points.at(i,1) < y_min) || \
-            (points.at(i,2) > z_max) || (points.at(i,2) < z_min)){
+        if ((points.at(i,0) >= x_max) || (points.at(i,0) < x_min) || \
+            (points.at(i,1) >= y_max) || (points.at(i,1) < y_min) || \
+            (points.at(i,2) >= z_max) || (points.at(i,2) < z_min)){
             continue;
         }
         double canvas_x = floor((points.at(i,0) - x_min)/x_step);
@@ -242,6 +244,25 @@ void create_pillars(py::array_t<double> &points,
             Pillar *pillar = pillar_map.at(canvas);
             pillar->add_point(pp);
         }
+
+        if (means_map.find(canvas) == means_map.end())
+        {
+            double *means = new double[4];
+            means[0] = points.at(i,0);
+            means[1] = points.at(i,1);
+            means[2] = points.at(i,2);
+            means[3] = 1;
+            means_map.insert({canvas,means});
+        }
+        else
+        {
+            double *means = means_map.at(canvas);
+            double n = means[3];
+            means[0] = means[0]*(n/(n+1)) + points.at(i,0)/(n+1);
+            means[1] = means[1]*(n/(n+1)) + points.at(i,1)/(n+1);
+            means[2] = means[2]*(n/(n+1)) + points.at(i,2)/(n+1);
+            means[3] = n+1;
+        }
     }
 
     int num_pillars = 0;
@@ -255,7 +276,7 @@ void create_pillars(py::array_t<double> &points,
         boost::array<double,2> canvas = it->first;
         Pillar *pillar = it->second; 
 
-        std::vector<double> pillar_mean = pillar->point_mean();
+        double *pillar_mean = means_map.at(canvas);
         int num_points = 0;
         for (auto p : pillar->get_points())
         {
@@ -272,13 +293,12 @@ void create_pillars(py::array_t<double> &points,
         indices.mutable_at(num_pillars,1) = canvas[0];
         indices.mutable_at(num_pillars,2) = canvas[1];
         num_pillars++;
-    }
-
-    for(it = pillar_map.begin();it!=pillar_map.end(); ++it){
+        delete pillar_mean;
+        
         for (auto p: (it->second)->get_points()){
             delete p;
         }
-        delete it->second; 
+        delete it->second;
     }
 
 
