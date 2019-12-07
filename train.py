@@ -1,7 +1,9 @@
 import pandas as pd
 from datetime import datetime
 import os
+import gc
 import os.path as osp
+import pickle
 import torch
 import torch.nn as nn
 import model.model as model
@@ -11,7 +13,9 @@ from data.data_prep import make_anchor_boxes
 from data.dataset import PPDataset
 from config import cfg
 from lyft_dataset_sdk.lyftdataset import LyftDataset
-
+from pyquaternion import Quaternion
+from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
+from data_prep import move_boxes_to_canvas_space
 
 def make_token_list(df,l5d):
     first_samples = df.first_sample_token.values
@@ -29,7 +33,6 @@ json_path = cfg.DATA.TRAIN_JSON_PATH
 l5d = LyftDataset(data_path=data_path,json_path=json_path,
                   verbose=True)
 
-#l5d = pickle.load(open('lyft_dataset.pkl','rb'))
 records = [(l5d.get('sample', record['first_sample_token'])['timestamp'], record) for record in l5d.scene]
 
 entries = []
@@ -53,37 +56,59 @@ vi = val_df.index
 train_df = df[~df.index.isin(vi)]
 
 token_list = make_token_list(train_df,l5d)
+lidar_filepaths = []
+data_dict = {}
+
+for token in tqdm_notebook(token_list,total=len(token_list)):
+    sample = l5d.get('sample',token)
+    sample_lidar_token = sample['data']['LIDAR_TOP']
+    try:
+        lidar_filepath = l5d.get_sample_data_path(sample_lidar_token)
+        lidar_pointcloud = LidarPointCloud.from_file(lidar_filepath)
+    except Exception as e:
+        print('Failed to load LIDAR cloud for {}: {}:'.format(token,e))
+        continue
+    lidar_data = l5d.get('sample_data',sample_lidar_token)
+
+    ego_pose = l5d.get('ego_pose',lidar_data['ego_pose_token'])
+    calibrated_sensor = l5d.get('calibrated_sensor',lidar_data['calibrated_sensor_token'])
+    car_from_sensor = transform_matrix(calibrated_sensor['translation'],
+                                        Quaternion(calibrated_sensor['rotation']),
+                                        inverse = False)
+    boxes = l5d.get_boxes(sample_lidar_token)
+    boxes = move_boxes_to_canvas_space(boxes,ego_pose)
+    lidar_filepath = l5d.get_sample_data_path(sample_lidar_token)
+    lidar_filepaths.append(lidar_filepath)
+    box_filepath = osp.join(cfg.DATA.BOX_DIR,token + '_boxes.pkl')
+    pickle.dump(boxes,open(box_filepath,'wb'))
+    data_dict[lidar_filepath] = {'boxes':box_filepath,'trans_matrix':car_from_sensor}
+
+del l5d,df,train_df,val_df,vi,token_list,records,entries
+gc.collect()
+
 anchor_boxes,anchor_corners,anchor_centers = make_anchor_boxes()
-
-pp_dataset = PPDataset(token_list,l5d,anchor_boxes,
-                       anchor_corners,anchor_centers)
-
-#pickle.dump(anchor_boxes,open('anchor_boxes.pkl','wb'))
-#pickle.dump(anchor_corners,open('anchor_corners.pkl','wb'))
-#pickle.dump(anchor_centers,open('anchor_centers.pkl','wb'))
-#pickle.dump(l5d,open('lyft_dataset.pkl','wb'))
-
-#anchor_boxes = pickle.load(open('anchor_boxes.pkl','rb'))
-#anchor_corners = pickle.load(open('anchor_corners.pkl','rb'))
-#anchor_centers = pickle.load(open('anchor_centers','rb'))
 
 fn_in = cfg.NET.FEATURE_NET_IN
 fn_out = cfg.NET.FEATURE_NET_OUT
 cls_channels = len(cfg.DATA.ANCHOR_DIMS)*(cfg.DATA.NUM_CLASSES + 1)
 reg_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.REG_DIMS
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-pp_model = model.PPModel(fn_in,fn_out,cls_channels,reg_channels,device)
-pp_loss = loss.PPLoss(cfg.NET.B_ORT,cfg.NET.B_REG,cfg.NET.B_CLS,cfg.NET.GAMMA)
+#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
+pp_model = PPModel(fn_in,fn_out,cls_channels,reg_channels,device)
+pp_loss = PPLoss(cfg.NET.B_ORT,cfg.NET.B_REG,cfg.NET.B_CLS,cfg.NET.GAMMA)
+pp_dataset = PPDataset(lidar_filepaths,data_dict,anchor_boxes,
+                       anchor_corners,anchor_centers)
 
 pp_model = pp_model.to(device)
-optim = torch.optim.Adam(pp_model.parameters(),lr=2e-4)
+pp_loss = pp_loss.to(device)
+optim = torch.optim.Adam(pp_model.parameters(),lr=2e-5)
 batch_size = cfg.NET.BATCH_SIZE
 epochs = cfg.NET.EPOCHS
-num_workers = cfg.NET.NUM_WORKERS
+#num_workers = cfg.NET.NUM_WORKERS
+num_workers=0
 dataloader = torch.utils.data.DataLoader(pp_dataset,batch_size,
-                                         shuffle=False,num_workers=0)
-
+                                         shuffle=False,num_workers=num_workers)
 for epoch in range(epochs):
     print('EPOCH: ',epoch)
     epoch_losses = []
@@ -91,23 +116,26 @@ for epoch in range(epochs):
 
     for i,(pillar,inds,target) in enumerate(progress_bar):
         print('training on sample: ',i)
-        if i == 0:
-            print('pillar size: ',(pillar.element_size()*pillar.nelement())/10**9)
-            print('inds size: ',(inds.element_size()*inds.nelement())/10**9)
-            print('target size: ',(target.element_size()*target.nelement())/10**9)
-        if pillar is None:
-            print('PILLARS NONE')
-            continue
+        print('nan pillars: ',check_nan(pillar))
+        print('nan inds: ',check_nan(inds))
+        print('nan target: ',check_nan(target))
+        print('pillars mean: ',torch.mean(pillar))
+        print('pillars std: ',torch.std(pillar))
         pillar = pillar.to(device)
         inds = inds.to(device)
         target = target.to(device)
         cls_tensor,reg_tensor = pp_model(pillar,inds)
         batch_loss = pp_loss(cls_tensor,reg_tensor,target)
-        batch_loss = batch_loss.to(device)
+        print(batch_loss)
         optim.zero_grad()
         batch_loss.backward()
         optim.step()
-        if i != 0 and i % 10 == 0:
+        if i % 5 == 0:
+            with torch.no_grad():
+                for name,params in pp_model.named_parameters():
+                    if params.requires_grad:
+                        print('name: {}, mean: {}, std: {}'.format(name,torch.mean(params.data),torch.std(params.data)))
+        if i != 0 and i % 100 == 0:
             ckpt_filename = 'pp_checkpoint_{}_{}.pth'.format(epoch,i)
             ckpt_filepath = osp.join(cfg.DATA.CKPT_DIR,ckpt_filename)
             torch.save(pp_model.state_dict(),ckpt_filepath)

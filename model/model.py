@@ -11,28 +11,29 @@ class PPFeatureNet(nn.Module):
         self.conv1 = nn.Conv2d(in_channels,out_channels,kernel_size=1)
         self.bn = nn.BatchNorm2d(out_channels)
     def forward(self,x):
+        print('feature net in: ',check_nan(x))
         x = self.conv1(x)
         x = F.relu(x)
         x = self.bn(x)
         x = torch.max(x,dim=2)[0]
+        print('feature net forward: ',check_nan(x))
         return x
 
 class PPScatter(nn.Module):
     def __init__(self,device):
         super(PPScatter,self).__init__()
-        self.device = device
+        self.device = device 
         
     def forward(self,x,inds):
         out_sh = x.size()
-        inds = inds.cpu().numpy()
-        out = torch.zeros(out_sh[0],out_sh[1],cfg.DATA.CANVAS_HEIGHT,cfg.DATA.CANVAS_WIDTH)
-        out = out.to(self.device)
-        non_empty = np.where(inds[:,:,0] == 1)
-        x_inds = torch.from_numpy(inds[non_empty][:,1]).to(device).long()
-        y_inds = torch.from_numpy(inds[non_empty][:,2]).to(device).long()
-        batch = torch.from_numpy(non_empty[0]).to(device).long()
-        pillar = torch.from_numpy(non_empty[1]).to(device).long()
+        out = torch.zeros(out_sh[0],out_sh[1],cfg.DATA.CANVAS_HEIGHT,cfg.DATA.CANVAS_WIDTH).to(self.device)
+        non_empty = torch.nonzero(inds[:,:,0])
+        batch = non_empty[:,0]
+        pillar = non_empty[:,1]
+        x_inds = inds[batch,pillar][:,1]
+        y_inds = inds[batch,pillar][:,2]
         out[batch,:,y_inds,x_inds] = x[batch,:,pillar]
+        print('scatter net forward: ',check_nan(x))
         return out
 
 class PPDownBlock(nn.Module):
@@ -89,7 +90,9 @@ class PPBackbone(nn.Module):
         out2 = self.up2(x)
         x = self.down3(x)
         out3 = self.up3(x)
-        return torch.cat((out1,out2,out3),dim=1)
+        out = torch.cat((out1,out2,out3),dim=1)
+        print('backbone forward: ',check_nan(out))
+        return out
 
 
 class PPDetectionHead(nn.Module):
@@ -102,7 +105,8 @@ class PPDetectionHead(nn.Module):
     def forward(self,x):
         cls_scores = self.cls(x)
         reg_scores = self.reg(x)
-
+        print('det head class: ',check_nan(cls_scores))
+        print('det head reg: ',check_nan(reg_scores))
         return (cls_scores,reg_scores)
 
 class PPModel(nn.Module):

@@ -4,6 +4,13 @@ import numpy as np
 import psutil
 import os
 
+######### CONFIG ##########
+import os.path as osp
+from easydict import EasyDict as edict
+import numpy as np
+import psutil
+import os
+
 cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
@@ -13,6 +20,7 @@ cfg.DATA.ROOT_DIR = '/kaggle/input/3d-object-detection-for-autonomous-vehicles'
 cfg.DATA.CKPT_DIR = '/kaggle/working/ckpts'
 cfg.DATA.DATA_PATH = '.'
 cfg.DATA.TRAIN_JSON_PATH = '/kaggle/input/3d-object-detection-for-autonomous-vehicles/train_data'
+cfg.DATA.BOX_DIR = '/kaggle/working/'
 
 # pillar parameters 
 cfg.DATA.X_MIN = -75
@@ -40,10 +48,11 @@ other_vehicle = np.array([2.75,8.5,3.5])/cfg.DATA.STEP
 pedestrian = np.array([.75,.75,1.75])/cfg.DATA.STEP
 truck = np.array([3,10,3.5])/cfg.DATA.STEP
 cfg.DATA.NUM_CLASSES = 9
-cfg.DATA.ANCHOR_DIMS = [animal,animal,bicycle,bicycle,bus,bus,\
-               car,car,emergency_vehicle,emergency_vehicle, \
-               motorcycle,motorcycle,other_vehicle,other_vehicle,\
-               pedestrian,pedestrian,truck,truck]
+cfg.DATA.ANCHOR_DIMS = ["animal","animal","bicycle","bicycle","bus","bus",\
+               "car","car","emergency_vehicle","emergency_vehicle", \
+               "motorcycle","motorcycle","other_vehicle","other_vehicle",\
+               "pedestrian","pedestrian","truck","truck"]
+
 
 cfg.DATA.ANCHOR_YAWS = [0,90]*cfg.DATA.NUM_CLASSES
 cfg.DATA.ANCHOR_ZS = [0]*2 +[.75]*2 + [1.5]*2 +[.75]*2 + [1.15]*2 + [.5]*2 + [1.15]*2 +[1]*2 +[1.5]*2
@@ -55,7 +64,7 @@ cfg.DATA.IOU_POS_THRESH = .6
 cfg.DATA.IOU_NEG_THRESH = .45
 
 # training set construction parameters
-cfg.DATA.NUM_WORKERS = 0
+cfg.DATA.NUM_WORKERS = 4
 cfg.DATA.TRAIN_DATA_FOLDER = osp.join(cfg.DATA.ROOT_DIR,'data/training_data')
 cfg.DATA.VAL_DATA_FOLDER = osp.join(cfg.DATA.ROOT_DIR,'data/validation_data')
 cfg.DATA.NAME_TO_IND = {'animal':0,'bicycle':1,'bus':2,'car':3,'emergency_vehicle':4,'motorcycle':5,'other_vehicle':6,'pedestrian':7,'truck':8}
@@ -64,9 +73,9 @@ cfg.DATA.NAME_TO_IND = {'animal':0,'bicycle':1,'bus':2,'car':3,'emergency_vehicl
 
 cfg.NET.FEATURE_NET_IN = 9
 cfg.NET.FEATURE_NET_OUT = 64
-cfg.NET.BATCH_SIZE = 1
+cfg.NET.BATCH_SIZE = 4
 cfg.NET.EPOCHS = 10
-cfg.NET.NUM_WORKERS = 8
+cfg.NET.NUM_WORKERS = 1
 cfg.NET.B_ORT = .2
 cfg.NET.B_REG = 2
 cfg.NET.B_CLS = 1

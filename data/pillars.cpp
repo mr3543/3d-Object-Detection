@@ -270,6 +270,20 @@ void create_pillars(py::array_t<double> &points,
     for (it = pillar_map.begin();it!=pillar_map.end(); ++it)
     {
         if (num_pillars >= max_pillars){
+            //std::cerr << "freeing unused pillars max pillars\n";
+            for (auto p: (it->second)->get_points()){
+                delete p;
+            }
+            delete it->second;
+            //std::cerr << "finished freeing frist it in max pillars\n";
+            while (it !=pillar_map.end()){
+                for (auto p: (it->second)->get_points()){
+                    delete p;
+                }
+            delete it->second;
+            ++it;
+            }
+            //std::cerr << "finished freeing rest of pillars max pillars\n";
             break;
         }
 
@@ -278,30 +292,35 @@ void create_pillars(py::array_t<double> &points,
 
         double *pillar_mean = means_map.at(canvas);
         int num_points = 0;
-        for (auto p : pillar->get_points())
+        std::vector<PillarPoint*> pillar_points = pillar->get_points();
+        for (int i =0; i < pillar_points.size(); i++)
         {
             if (num_points >= max_points_per_pillar){
+                //std::cerr << "freeing unused points\n";
+                while (i < pillar_points.size()){
+                    delete pillar_points[i];
+                    i++;
+                }
+                //std::cerr << "finished freeing unused points in max points\n";
                 break;
             }
+            PillarPoint *p = pillar_points[i];
             p->set_xc(pillar_mean[0] - p->get_x());
             p->set_yc(pillar_mean[1] - p->get_y());
             p->set_zc(pillar_mean[2] - p->get_z());
             p->make_feature(tensor,num_pillars,num_points);
             num_points++;
+            //std::cerr << "freeing pillar point p \n";
+            delete p;
         }
         indices.mutable_at(num_pillars,0) = 1;
         indices.mutable_at(num_pillars,1) = canvas[0];
         indices.mutable_at(num_pillars,2) = canvas[1];
         num_pillars++;
+        //std::cerr << "freeing pillar mean\n"
         delete pillar_mean;
-        
-        for (auto p: (it->second)->get_points()){
-            delete p;
-        }
         delete it->second;
     }
-
-
 }
 
 void make_ious(py::array_t<double> &a_corners,
