@@ -265,17 +265,17 @@ void create_pillars(py::array_t<double> &points,
         }
     }
 
+    std::cerr << "done assigning points to pillars\n";
     int num_pillars = 0;
     boost::unordered::unordered_map<boost::array<double,2>,Pillar*>::iterator it;
     for (it = pillar_map.begin();it!=pillar_map.end(); ++it)
     {
         if (num_pillars >= max_pillars){
-            //std::cerr << "freeing unused pillars max pillars\n";
+            std::cerr << "too many pillars\n";
             for (auto p: (it->second)->get_points()){
                 delete p;
             }
             delete it->second;
-            //std::cerr << "finished freeing frist it in max pillars\n";
             while (it !=pillar_map.end()){
                 for (auto p: (it->second)->get_points()){
                     delete p;
@@ -283,7 +283,6 @@ void create_pillars(py::array_t<double> &points,
             delete it->second;
             ++it;
             }
-            //std::cerr << "finished freeing rest of pillars max pillars\n";
             break;
         }
 
@@ -296,12 +295,11 @@ void create_pillars(py::array_t<double> &points,
         for (int i =0; i < pillar_points.size(); i++)
         {
             if (num_points >= max_points_per_pillar){
-                //std::cerr << "freeing unused points\n";
+                std::cerr << "too many points\n";
                 while (i < pillar_points.size()){
                     delete pillar_points[i];
                     i++;
                 }
-                //std::cerr << "finished freeing unused points in max points\n";
                 break;
             }
             PillarPoint *p = pillar_points[i];
@@ -310,14 +308,14 @@ void create_pillars(py::array_t<double> &points,
             p->set_zc(pillar_mean[2] - p->get_z());
             p->make_feature(tensor,num_pillars,num_points);
             num_points++;
-            //std::cerr << "freeing pillar point p \n";
+            std::cerr << "freeing pillar point p \n";
             delete p;
         }
         indices.mutable_at(num_pillars,0) = 1;
         indices.mutable_at(num_pillars,1) = canvas[0];
         indices.mutable_at(num_pillars,2) = canvas[1];
         num_pillars++;
-        //std::cerr << "freeing pillar mean\n"
+        std::cerr << "freeing pillar mean\n";
         delete pillar_mean;
         delete it->second;
     }
