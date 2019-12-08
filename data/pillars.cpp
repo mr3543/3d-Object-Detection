@@ -223,7 +223,7 @@ void create_pillars(py::array_t<double> &points,
             (points.at(i,2) >= z_max) || (points.at(i,2) < z_min)){
             continue;
         }
-        std::cout << "processing point:\n"
+        std::cout << "processing point:\n";
         std::cout << points.at(i,0) << ", " << points.at(i,1) << ", " << points.at(i,2);
         double canvas_x = floor((points.at(i,0) - x_min)/x_step);
         double canvas_y = floor((points.at(i,1) - y_min)/y_step);
