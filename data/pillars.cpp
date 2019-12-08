@@ -211,7 +211,7 @@ void create_pillars(py::array_t<double> &points,
                     double z_max,
                     double canvas_height)
 {
-    
+    /*
     std::cerr << "CREATE PILLARS\n";
     boost::unordered_map<boost::array<double,2>,Pillar*> pillar_map;
     boost::unordered_map<boost::array<double,2>,double*> means_map;
@@ -287,7 +287,7 @@ void create_pillars(py::array_t<double> &points,
             delete it->second;
             ++it;
             }
-            */
+            
             break;
         }
 
@@ -306,7 +306,7 @@ void create_pillars(py::array_t<double> &points,
                     delete pillar_points[i];
                     i++;
                 }
-                */
+                
                 break;
             }
             PillarPoint *p = pillar_points[i];
@@ -326,6 +326,8 @@ void create_pillars(py::array_t<double> &points,
         //delete pillar_mean;
         //delete it->second;
     }
+    */
+    int x = 1;
 }
 
 void make_ious(py::array_t<double> &a_corners,
