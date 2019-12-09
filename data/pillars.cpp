@@ -212,7 +212,6 @@ void create_pillars(py::array_t<double> &points,
                     double canvas_height)
 {
     
-    std::cerr << "CREATE PILLARS\n";
     boost::unordered_map<boost::array<double,2>,Pillar*> pillar_map;
     boost::unordered_map<boost::array<double,2>,double*> means_map;
 
@@ -223,7 +222,6 @@ void create_pillars(py::array_t<double> &points,
             (points.at(i,2) >= z_max) || (points.at(i,2) < z_min)){
             continue;
         }
-        std::cout << "processing point:\n";
         std::cout << points.at(i,0) << ", " << points.at(i,1) << ", " << points.at(i,2);
         double canvas_x = floor((points.at(i,0) - x_min)/x_step);
         double canvas_y = floor((points.at(i,1) - y_min)/y_step);
@@ -268,26 +266,21 @@ void create_pillars(py::array_t<double> &points,
         }
     }
 
-    std::cerr << "done assigning points to pillars\n";
     int num_pillars = 0;
     boost::unordered::unordered_map<boost::array<double,2>,Pillar*>::iterator it;
     for (it = pillar_map.begin();it!=pillar_map.end(); ++it)
     {
         if (num_pillars >= max_pillars){
             
-            std::cerr << "too many pillars\n";
             for (auto p: (it->second)->get_points()){
-                std::cerr << "deleting first pillar point\n";
                 delete p;
             }
             delete it->second;
             ++it;
             while (it !=pillar_map.end()){
                 for (auto p: (it->second)->get_points()){
-                    std::cerr << "deleting remaining pillar points\n";
                     delete p;
                 }
-            std::cerr << "deleting pillar\n";
             delete it->second;
             ++it;
             }
@@ -304,8 +297,6 @@ void create_pillars(py::array_t<double> &points,
         for (int i =0; i < pillar_points.size(); i++)
         {
             if (num_points >= max_points_per_pillar){
-                
-                std::cerr << "too many points\n";
                 while (i < pillar_points.size()){
                     delete pillar_points[i];
                     i++;
@@ -318,14 +309,12 @@ void create_pillars(py::array_t<double> &points,
             p->set_zc(pillar_mean[2] - p->get_z());
             p->make_feature(tensor,num_pillars,num_points);
             num_points++;
-            std::cerr << "freeing pillar point p \n";
             delete p;
         }
         indices.mutable_at(num_pillars,0) = 1;
         indices.mutable_at(num_pillars,1) = canvas[0];
         indices.mutable_at(num_pillars,2) = canvas[1];
         num_pillars++;
-        std::cerr << "freeing pillar mean\n";
         delete pillar_mean;
         delete it->second;
     }
