@@ -211,7 +211,7 @@ void create_pillars(py::array_t<double> &points,
                     double z_max,
                     double canvas_height)
 {
-    /*
+    
     std::cerr << "CREATE PILLARS\n";
     boost::unordered_map<boost::array<double,2>,Pillar*> pillar_map;
     boost::unordered_map<boost::array<double,2>,double*> means_map;
@@ -274,16 +274,20 @@ void create_pillars(py::array_t<double> &points,
     for (it = pillar_map.begin();it!=pillar_map.end(); ++it)
     {
         if (num_pillars >= max_pillars){
-            /*
+            
             std::cerr << "too many pillars\n";
             for (auto p: (it->second)->get_points()){
+                std::cerr << "deleting first pillar point\n";
                 delete p;
             }
             delete it->second;
+            ++it;
             while (it !=pillar_map.end()){
                 for (auto p: (it->second)->get_points()){
+                    std::cerr << "deleting remaining pillar points\n";
                     delete p;
                 }
+            std::cerr << "deleting pillar\n";
             delete it->second;
             ++it;
             }
@@ -300,13 +304,12 @@ void create_pillars(py::array_t<double> &points,
         for (int i =0; i < pillar_points.size(); i++)
         {
             if (num_points >= max_points_per_pillar){
-                /*
+                
                 std::cerr << "too many points\n";
                 while (i < pillar_points.size()){
                     delete pillar_points[i];
                     i++;
                 }
-                
                 break;
             }
             PillarPoint *p = pillar_points[i];
@@ -316,18 +319,17 @@ void create_pillars(py::array_t<double> &points,
             p->make_feature(tensor,num_pillars,num_points);
             num_points++;
             std::cerr << "freeing pillar point p \n";
-            //delete p;
+            delete p;
         }
         indices.mutable_at(num_pillars,0) = 1;
         indices.mutable_at(num_pillars,1) = canvas[0];
         indices.mutable_at(num_pillars,2) = canvas[1];
         num_pillars++;
         std::cerr << "freeing pillar mean\n";
-        //delete pillar_mean;
-        //delete it->second;
+        delete pillar_mean;
+        delete it->second;
     }
-    */
-    int x = 1;
+    
 }
 
 void make_ious(py::array_t<double> &a_corners,
