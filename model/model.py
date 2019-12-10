@@ -4,22 +4,48 @@ import torch.nn.functional as F
 import torch.utils.data
 import numpy as np
 import sys
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.utils.data
+import numpy as np
+import sys
+
+torch.manual_seed(0)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 class PPFeatureNet(nn.Module):
+    """
+    This layer takes in the pillar pseudo-image and runs a 1x1 convolution
+    on the input.
+    
+    The input is a tensor of size [B,D,P,N], where B is the mini-batch size,
+    D is the size of a single lidar point feature (x,y,z,r,xc,yc,zc,xp,yp). P 
+    is the number of pillars, and N is the number of points per pillar.
+    
+    This tensor is fed through a 1x1 convolution to produce a tensor of size
+    [B,C,P,N]. We then take the max of the last dimension to output a tensor of
+    size [B,C,P]
+    """
     def __init__(self,in_channels,out_channels):
         super(PPFeatureNet,self).__init__()
         self.conv1 = nn.Conv2d(in_channels,out_channels,kernel_size=1)
         self.bn = nn.BatchNorm2d(out_channels)
     def forward(self,x):
-        print('feature net in: ',check_nan(x))
         x = self.conv1(x)
         x = F.relu(x)
         x = self.bn(x)
-        x = torch.max(x,dim=2)[0]
-        print('feature net forward: ',check_nan(x))
+        x = torch.max(x,dim=3)[0]
         return x
 
 class PPScatter(nn.Module):
+    """
+    This layer takes a tensor of size [B,C,P] and transforms it to 
+    a tensor of [B,C,H,W] by scattering back the pillars to their 
+    original H,W location. We pass `inds` to the `forward` method
+    which contain the H,W locations of the non-empty pillars.
+    """
     def __init__(self,device):
         super(PPScatter,self).__init__()
         self.device = device 
@@ -33,10 +59,15 @@ class PPScatter(nn.Module):
         x_inds = inds[batch,pillar][:,1]
         y_inds = inds[batch,pillar][:,2]
         out[batch,:,y_inds,x_inds] = x[batch,:,pillar]
-        print('scatter net forward: ',check_nan(x))
         return out
 
 class PPDownBlock(nn.Module):
+    """
+    Standard down convolutional block. First layer takes 
+    the input and reduces its H,W by 2 with a stride 2 
+    convolution. The next layers are stride 1 and do
+    not change the feature map size. 
+    """
     def __init__(self,num_layers,in_channels,out_channels):
         super(PPDownBlock,self).__init__()
         block = []
@@ -56,6 +87,12 @@ class PPDownBlock(nn.Module):
         return out
 
 class PPUpBlock(nn.Module):
+    """
+    Standard up convolutional block. First layer takes in input
+    and increases in H,W size by 2 with a fractionally strided 
+    convolution layer. The next layers are stride 1 and do not change
+    the feature map size. 
+    """
     def __init__(self,in_channels,out_channels,stride,
                  padding,output_padding):
         super(PPUpBlock,self).__init__()
@@ -73,6 +110,11 @@ class PPUpBlock(nn.Module):
         return x
 
 class PPBackbone(nn.Module):
+    """
+    Model backbone, consists of down blocks
+    and up blocks.
+    """
+    
     def __init__(self,in_channels):
         super(PPBackbone,self).__init__()
         # add down block one
@@ -91,11 +133,16 @@ class PPBackbone(nn.Module):
         x = self.down3(x)
         out3 = self.up3(x)
         out = torch.cat((out1,out2,out3),dim=1)
-        print('backbone forward: ',check_nan(out))
         return out
 
 
 class PPDetectionHead(nn.Module):
+    """
+    Detection head. The classification and regression layers are
+    implemented as stride 1, kernel 1 convolutional layers. The output
+    channels are the model's unnormalized predictions for the classification 
+    and regression targests. This is similar to the SSD architecture. 
+    """
     def __init__(self,in_channels,cls_out_channels,reg_out_channels):
         super(PPDetectionHead,self).__init__()
         self.cls = nn.Conv2d(in_channels,cls_out_channels,
@@ -105,11 +152,13 @@ class PPDetectionHead(nn.Module):
     def forward(self,x):
         cls_scores = self.cls(x)
         reg_scores = self.reg(x)
-        print('det head class: ',check_nan(cls_scores))
-        print('det head reg: ',check_nan(reg_scores))
         return (cls_scores,reg_scores)
 
 class PPModel(nn.Module):
+    """
+    End to end model architecture. Currently not used due to the need
+    for LSUV initialization. 
+    """
     def __init__(self,feature_net_in_channels,feature_net_out_channels,
                  class_layer_channels,reg_layer_channels,device):
         super(PPModel,self).__init__()

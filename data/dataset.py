@@ -3,15 +3,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
 import numpy as np
-import pickle
-import pillars
-from .. import config
-from data_prep import move_boxes_to_canvas_space,create_target
+import data.pillars as pillars
+from config import cfg
+from utils.box_utils import move_boxes_to_canvas_space,create_target
 from lyft_dataset_sdk.utils.data_classes import LidarPointCloud
 from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
 from pyquaternion import Quaternion
-
-cfg = config.cfg
 
 class PPDataset(torch.utils.data.Dataset):
     def __init__(self,lidars,data_dict,anchor_boxes,

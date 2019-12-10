@@ -1,8 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from config import cfg
 
 class PPLoss(nn.Module):
+    """
+    """
     def __init__(self,b_ort,b_reg,b_cls,gamma):
         super(PPLoss,self).__init__()
         self.b_ort,self.b_reg,self.b_cls,self.gamma = b_ort,b_reg,b_cls,gamma

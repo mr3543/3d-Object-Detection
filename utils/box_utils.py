@@ -3,9 +3,9 @@ import pandas as pd
 import time
 import os
 import sys
-import gc
-from tqdm import tqdm, tqdm_notebook
-
+from tqdm import tqdm
+from config import cfg
+import data.pillars as pillars
 from datetime import datetime
 from pyquaternion import Quaternion
 from lyft_dataset_sdk.utils.data_classes import LidarPointCloud, Box
@@ -52,7 +52,7 @@ def make_anchor_boxes():
     corners_list = []
     boxes_list = []
     centers_list = []
-    for y in tqdm_notebook(range(0,fm_height)):
+    for y in tqdm(range(0,fm_height)):
         for x in range(0,fm_width):
             for d in range(0,len(anchor_dims)):
                 x_center = (x + 0.5)/fm_scale

@@ -1,26 +1,30 @@
 import os.path as osp
 from easydict import EasyDict as edict
 import numpy as np
-import psutil
-import os
-
-######### CONFIG ##########
-import os.path as osp
-from easydict import EasyDict as edict
-import numpy as np
-import psutil
 import os
 
 cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
 
+machine = 'local'
+#machine = 'kaggle'
+
 # data location paramers
-cfg.DATA.ROOT_DIR = '/kaggle/input/3d-object-detection-for-autonomous-vehicles'
-cfg.DATA.CKPT_DIR = '/kaggle/working/ckpts'
-cfg.DATA.DATA_PATH = '.'
-cfg.DATA.TRAIN_JSON_PATH = '/kaggle/input/3d-object-detection-for-autonomous-vehicles/train_data'
-cfg.DATA.BOX_DIR = '/kaggle/working/'
+if machine == 'local':
+    cfg.DATA.ROOT_DIR = '/home/mmr/lyft_dataset'
+    cfg.DATA.CKPT_DIR = '/home/mmr/PointPillars/ckpts'
+    cfg.DATA.DATA_PATH = '/home/mmr/lyft_dataset'
+    cfg.DATA.TRAIN_JSON_PATH = '/home/mmr/lyft_dataset/train_data'
+    cfg.DATA.BOX_DIR = '/home/mmr/PointPillars/boxes'
+
+if machine == 'kaggle':
+    cfg.DATA.ROOT_DIR = '/kaggle/input/3d-object-detection-for-autonomous-vehicles'
+    cfg.DATA.CKPT_DIR = '/kaggle/working/ckpts'
+    cfg.DATA.DATA_PATH = '.'
+    cfg.DATA.TRAIN_JSON_PATH = '/kaggle/input/3d-object-detection-for-autonomous-vehicles/train_data'
+    cfg.DATA.BOX_DIR = '/kaggle/working/boxes/'
+
 
 # pillar parameters 
 cfg.DATA.X_MIN = -75
