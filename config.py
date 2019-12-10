@@ -23,7 +23,7 @@ if machine == 'kaggle':
     cfg.DATA.CKPT_DIR = '/kaggle/working/ckpts'
     cfg.DATA.DATA_PATH = '.'
     cfg.DATA.TRAIN_JSON_PATH = '/kaggle/input/3d-object-detection-for-autonomous-vehicles/train_data'
-    cfg.DATA.BOX_DIR = '/kaggle/working/boxes/'
+    cfg.DATA.BOX_DIR = '/kaggle/working/PointPillars/boxes/'
 
 
 # pillar parameters 
