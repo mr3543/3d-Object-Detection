@@ -3,13 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
 import numpy as np
-import sys
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.utils.data
-import numpy as np
-import sys
+from config import cfg
+import pdb
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True

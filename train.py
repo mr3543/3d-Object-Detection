@@ -6,6 +6,8 @@ from model.model import PPBackbone,PPDetectionHead,PPFeatureNet,PPScatter
 from model.loss import PPLoss
 from data.dataset import PPDataset
 from tqdm import tqdm
+import sys
+import pdb
 
 fn_in = cfg.NET.FEATURE_NET_IN
 fn_out = cfg.NET.FEATURE_NET_OUT
@@ -26,7 +28,6 @@ epochs = cfg.NET.EPOCHS
 num_workers = cfg.NET.NUM_WORKERS
 dataloader = torch.utils.data.DataLoader(pp_dataset,batch_size,
                                          shuffle=False,num_workers=num_workers)
-
 pp_featurenet = PPFeatureNet(fn_in,fn_out)
 pp_scatter = PPScatter(device)
 pp_backbone = PPBackbone(fn_out)
@@ -39,10 +40,10 @@ pp_backbone = pp_backbone.to(device)
 pp_det_head = pp_det_head.to(device)
 pp_loss = pp_loss.to(device)
 
-(p,i,t) = pp_dataset[0]
-p = p[None,...].to(device)
-i = i[None,...].to(device)
-t = t[None,...].to(device)
+(p,i,t) = next(iter(dataloader))
+p = p.to(device)
+i = i.to(device)
+t = t.to(device)
 
 pp_featurenet = LSUVinit(pp_featurenet,p,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
 feature_out = pp_featurenet(p)
@@ -54,7 +55,12 @@ params = list(pp_featurenet.parameters()) + list(pp_scatter.parameters()) + list
          list(pp_det_head.parameters()) + list(pp_loss.parameters())
 
 pp_loss = pp_loss.to(device)
-optim = torch.optim.Adam(params,lr=2e-5)
+lr = cfg.NET.LEARNING_RATE
+wd = cfg.NET.WEIGHT_DECAY
+optim = torch.optim.Adam(params,lr=lr,weight_decay=wd)
+
+print('STARTING TRAINING')
+
 
 for epoch in range(epochs):
     print('EPOCH: ',epoch)
@@ -81,11 +87,10 @@ for epoch in range(epochs):
                 for param in params:
                     if param.requires_grad and param.name:
                         print('name: {}, mean: {}, std: {}'.format(param.name,torch.mean(param.data),torch.std(param.data)))
-        
-        if i != 0 and i % 100 == 0:
+       """ 
+        if i != 0 and i % 25 == 0:
             ckpt_filename = 'pp_checkpoint_{}_{}.pth'.format(epoch,i)
             ckpt_filepath = osp.join(cfg.DATA.CKPT_DIR,ckpt_filename)
             torch.save(pp_model.state_dict(),ckpt_filepath)
-        """
 
     epoch_losses.append(batch_loss.detach().cpu().numpy())

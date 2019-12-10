@@ -8,7 +8,8 @@ cfg.DATA = edict()
 cfg.NET = edict()
 
 #machine = 'local'
-machine = 'kaggle'
+#machine = 'kaggle'
+machine = 'cloud'
 
 # data location paramers
 if machine == 'local':
@@ -25,6 +26,13 @@ if machine == 'kaggle':
     cfg.DATA.TRAIN_JSON_PATH = '/kaggle/input/3d-object-detection-for-autonomous-vehicles/train_data'
     cfg.DATA.BOX_DIR = '/kaggle/working/PointPillars/boxes/'
 
+if machine == 'cloud':
+    cfg.DATA.ROOT_DIR = '/home/michaelregan/data/'
+    cfg.DATA.CKPT_DIR = '/home/PointPillars/ckpts'
+    cfg.DATA.DATA_PATH = '/home/michaelregan/data/'
+    cfg.DATA.TRAIN_JSON_PATH = '/home/michaelregan/data/train_data'
+    cfg.DATA.BOX_DIR = '/home/michaelregan/data/boxes/'
+    
 
 # pillar parameters 
 cfg.DATA.X_MIN = -75
@@ -52,10 +60,10 @@ other_vehicle = np.array([2.75,8.5,3.5])/cfg.DATA.STEP
 pedestrian = np.array([.75,.75,1.75])/cfg.DATA.STEP
 truck = np.array([3,10,3.5])/cfg.DATA.STEP
 cfg.DATA.NUM_CLASSES = 9
-cfg.DATA.ANCHOR_DIMS = ["animal","animal","bicycle","bicycle","bus","bus",\
-               "car","car","emergency_vehicle","emergency_vehicle", \
-               "motorcycle","motorcycle","other_vehicle","other_vehicle",\
-               "pedestrian","pedestrian","truck","truck"]
+cfg.DATA.ANCHOR_DIMS = [animal,animal,bicycle,bicycle,bus,bus,\
+               car,car,emergency_vehicle,emergency_vehicle, \
+               motorcycle,motorcycle,other_vehicle,other_vehicle,\
+               pedestrian,pedestrian,truck,truck]
 
 
 cfg.DATA.ANCHOR_YAWS = [0,90]*cfg.DATA.NUM_CLASSES
@@ -79,7 +87,9 @@ cfg.NET.FEATURE_NET_IN = 9
 cfg.NET.FEATURE_NET_OUT = 64
 cfg.NET.BATCH_SIZE = 4
 cfg.NET.EPOCHS = 10
-cfg.NET.NUM_WORKERS = 1
+cfg.NET.LEARNING_RATE = 1e-5
+cfg.NET.WEIGHT_DECAY = 1e-4
+cfg.NET.NUM_WORKERS = 4
 cfg.NET.B_ORT = .2
 cfg.NET.B_REG = 2
 cfg.NET.B_CLS = 1

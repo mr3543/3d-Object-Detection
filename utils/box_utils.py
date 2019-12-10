@@ -85,7 +85,7 @@ def create_target(anchor_corners,
                    anchor_centers,gt_centers,ious)
     t_max_ious = np.max(ious.transpose([1,0]),axis=1)
     t_argmax_ious = np.argmax(ious.transpose([1,0]),axis=1)
-    targets = np.zeros((len(anchor_boxes),10))   
+    targets = np.zeros((len(anchor_box_list),10))   
  
     max_ious = np.max(ious,axis=1)
     arg_max_ious = np.argmax(ious,axis=1)
@@ -159,3 +159,7 @@ def move_boxes_to_canvas_space(boxes,ego_pose):
     
    # print('RETURNING {} BOXES '.format(len(box_list)))
     return box_list
+
+
+if __name__ == '__main__':
+    a,b,c = make_anchor_boxes()

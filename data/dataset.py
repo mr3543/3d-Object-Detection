@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.utils.data
 import numpy as np
 import data.pillars as pillars
+import pickle
 from config import cfg
 from utils.box_utils import move_boxes_to_canvas_space,create_target
 from lyft_dataset_sdk.utils.data_classes import LidarPointCloud
@@ -47,7 +48,7 @@ class PPDataset(torch.utils.data.Dataset):
                             cfg.DATA.X_MIN,cfg.DATA.Y_MIN,cfg.DATA.Z_MIN,
                             cfg.DATA.X_MAX,cfg.DATA.Y_MAX,cfg.DATA.Z_MAX,
                             cfg.DATA.CANVAS_HEIGHT)
-        pillar = pillar.transpose([2,1,0])
+        pillar = pillar.transpose([2,0,1])
         pillar = pillar.astype(np.float32)
         indices = indices.astype(np.int32)
         if self.training:
