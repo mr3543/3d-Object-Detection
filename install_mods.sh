@@ -13,4 +13,4 @@ ln -s /kaggle/input/3d-object-detection-for-autonomous-vehicles/train_images ima
 ln -s /kaggle/input/3d-object-detection-for-autonomous-vehicles/train_maps maps
 ln -s /kaggle/input/3d-object-detection-for-autonomous-vehicles/train_lidar lidar
 
-
+mkdir boxes

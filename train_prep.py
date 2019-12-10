@@ -78,7 +78,6 @@ for token in tqdm(token_list,total=len(token_list)):
     box_filepath = osp.join(cfg.DATA.BOX_DIR,token + '_boxes.pkl')
     pickle.dump(boxes,open(box_filepath,'wb'))
     data_dict[lidar_filepath] = {'boxes':box_filepath,'trans_matrix':car_from_sensor}
-    sys.exit(1)
 
 pickle.dump(data_dict,open('data_dict.pkl','wb'))
 pickle.dump(lidar_filepaths,open('lidar_filepaths.pkl','wb'))
