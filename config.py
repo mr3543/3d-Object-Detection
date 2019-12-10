@@ -7,8 +7,8 @@ cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
 
-machine = 'local'
-#machine = 'kaggle'
+#machine = 'local'
+machine = 'kaggle'
 
 # data location paramers
 if machine == 'local':
