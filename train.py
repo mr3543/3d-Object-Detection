@@ -86,15 +86,8 @@ for epoch in range(epochs):
     print('EPOCH: ',epoch)
     epoch_losses = []
     progress_bar = tqdm(dataloader)
-    #i = 0
-    #while True:
     for i,(pillar,inds,c_target,r_target) in enumerate(progress_bar):
         print('training on batch: ',i)
-        #(pillar,inds,target) = get_batch(pp_dataset,batch_size)
-        #if i == 0:
-        #    print(pillar.size())
-        #    print(inds.size())
-        #    print(target.size())
         pillar = pillar.to(device)
         inds = inds.to(device)
         c_target = c_target.to(device)
@@ -108,14 +101,6 @@ for epoch in range(epochs):
         optim.zero_grad()
         batch_loss.backward()
         optim.step()
-        #i += 1
-        """
-        if i % 5 == 0:
-            with torch.no_grad():
-                for param in params:
-                    if param.requires_grad and param.name:
-                        print('name: {}, mean: {}, std: {}'.format(param.name,torch.mean(param.data),torch.std(param.data)))
-       """ 
         if i != 0 and i % 25 == 0:
             print('saving model ckpt')
             cpd = cfg.DATA.CKPT_DIR
