@@ -9,7 +9,7 @@ anchor_boxes = pickle.load(open('anchor_boxes.pkl','rb'))
 anchor_corners = pickle.load(open('anchor_corners.pkl','rb'))
 anchor_centers = pickle.load(open('anchor_centers.pkl','rb'))
 pp_dataset = PPDataset(lidar_filepaths,data_dict,anchor_boxes,
-                       anchor_corners,anchor_centers,data_means=None,training=False)
+                       anchor_corners,anchor_centers,data_mean=None,training=False)
 
 means = torch.zeros(10800000)
 for i in tqdm(range(len(pp_dataset))):
