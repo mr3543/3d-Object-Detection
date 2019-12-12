@@ -13,7 +13,7 @@ from pyquaternion import Quaternion
 
 class PPDataset(torch.utils.data.Dataset):
     def __init__(self,lidars,data_dict,anchor_boxes,
-                 anchor_corners,anchor_centers,training=True):
+                 anchor_corners,anchor_centers,data_mean,training=True):
         super(PPDataset,self).__init__()
         
         self.data_dict = data_dict
@@ -22,6 +22,7 @@ class PPDataset(torch.utils.data.Dataset):
         self.anchor_boxes = anchor_boxes
         self.anchor_corners = anchor_corners
         self.anchor_centers = anchor_centers
+        self.data_mean = data_mean
 
     def __len__(self):
         return len(self.lidars)
@@ -49,13 +50,17 @@ class PPDataset(torch.utils.data.Dataset):
                             cfg.DATA.X_MAX,cfg.DATA.Y_MAX,cfg.DATA.Z_MAX,
                             cfg.DATA.CANVAS_HEIGHT)
         pillar = pillar.transpose([2,0,1])
-        pillar = pillar.astype(np.float32)
-        indices = indices.astype(np.int32)
+        pillar_size = pillar.shape
+        pillar = torch.from_numpy(pillar).float()
+        pillar = pillar.reshape(-1) - self.data_mean
+        pillar = pillar.reshape(pillar_size)
+        indices = torch.from_numpy(indices).long()
         if self.training:
-            target = create_target(self.anchor_corners,gt_corners,
+            c_target,r_target = create_target(self.anchor_corners,gt_corners,
                                     self.anchor_centers,gt_centers,
                                     self.anchor_boxes,boxes)
-            return (torch.from_numpy(pillar).float(),torch.from_numpy(indices).long(),torch.from_numpy(target).float())
+            c_target = torch.from_numpy(c_target).float()
+            r_target = torch.from_numpy(r_target).float()
+            return (pillar,indices,c_target,r_target)
         
-        #return (pillar,indices,self.token_list[ind])
-        return (pillar,indices,None)
+        return (pillar,indices,None,None)

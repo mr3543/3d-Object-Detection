@@ -28,7 +28,7 @@ if machine == 'kaggle':
 
 if machine == 'cloud':
     cfg.DATA.ROOT_DIR = '/home/michaelregan/data/'
-    cfg.DATA.CKPT_DIR = '/home/PointPillars/ckpts'
+    cfg.DATA.CKPT_DIR = '/home/michaelregan/PointPillars/ckpts'
     cfg.DATA.DATA_PATH = '/home/michaelregan/data/'
     cfg.DATA.TRAIN_JSON_PATH = '/home/michaelregan/data/train_data'
     cfg.DATA.BOX_DIR = '/home/michaelregan/data/boxes/'
@@ -89,7 +89,7 @@ cfg.NET.BATCH_SIZE = 4
 cfg.NET.EPOCHS = 10
 cfg.NET.LEARNING_RATE = 1e-5
 cfg.NET.WEIGHT_DECAY = 1e-4
-cfg.NET.NUM_WORKERS = 4
+cfg.NET.NUM_WORKERS = 1
 cfg.NET.B_ORT = .2
 cfg.NET.B_REG = 2
 cfg.NET.B_CLS = 1

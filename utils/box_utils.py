@@ -12,6 +12,7 @@ from lyft_dataset_sdk.utils.data_classes import LidarPointCloud, Box
 from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
 from lyft_dataset_sdk.lyftdataset import LyftDataset
 
+
 def make_target(anchor_box,gt_box):
 
     ax,ay,az = anchor_box.center
@@ -32,13 +33,12 @@ def make_target(anchor_box,gt_box):
 
     dt = np.sin(gt - at)
 
-    class_ind = cfg.DATA.NAME_TO_IND[gt_box.name]
     if gt > 0:
         ort = 1
     else:
-        ort = -1
+        ort = 0
 
-    return [1,dx,dy,dz,dw,dl,dh,dt,ort,class_ind]
+    return [1,dx,dy,dz,dw,dl,dh,dt,ort]
 
 def make_anchor_boxes():
     
@@ -76,39 +76,41 @@ def create_target(anchor_corners,
                   gt_centers,
                   anchor_box_list,
                   gt_box_list):
-    
+   
     pos_thresh = cfg.DATA.IOU_POS_THRESH
     neg_thresh = cfg.DATA.IOU_NEG_THRESH
     
     ious = np.zeros((len(anchor_box_list),len(gt_box_list)))
     pillars.make_ious(anchor_corners,gt_corners,
                    anchor_centers,gt_centers,ious)
-    t_max_ious = np.max(ious.transpose([1,0]),axis=1)
-    t_argmax_ious = np.argmax(ious.transpose([1,0]),axis=1)
-    targets = np.zeros((len(anchor_box_list),10))   
- 
+    
+    cls_targets = np.zeros((len(anchor_box_list),cfg.DATA.NUM_CLASSES))   
+    reg_targets = np.zeros((len(anchor_box_list),cfg.DATA.REG_DIMS))
+    
+    gt_box_classes = np.array([cfg.DATA.NAME_TO_IND[box.name] for box in gt_box_list],dtype=np.int32)
+    
     max_ious = np.max(ious,axis=1)
     arg_max_ious = np.argmax(ious,axis=1)
-    pos_anchors = np.where(max_ious > pos_thresh)
-    neg_anchors = np.where(max_ious < neg_thresh)
+    pos_anchors = np.where(max_ious > pos_thresh)[0]
     pos_boxes = arg_max_ious[pos_anchors]
     
     ious = ious.transpose([1,0])
     top_anchor_for_box = np.argmax(ious,axis=1)
+    
+    cls_targets[pos_anchors,gt_box_classes[pos_boxes]] = 1
+    cls_targets[top_anchor_for_box,:] = 0
+    cls_targets[top_anchor_for_box,gt_box_classes] = 1 
 
-    targets[neg_anchors[0],0] = -1
-
-    for i,anch in enumerate(pos_anchors[0]):
-        anchor = anchor_box_list[anch]
-        matching_gt_ind = pos_boxes[i]
-        matching_box = gt_box_list[matching_gt_ind]
-        targets[anch,:] = make_target(anchor,matching_box)
+    for i,anch in enumerate(pos_anchors):
+        reg_targets[anch,:] = make_target(anchor_box_list[anch],
+                                          gt_box_list[pos_boxes[i]])
 
     for i,anch in enumerate(top_anchor_for_box):
-        targets[anch,:] = make_target(anchor_box_list[anch],gt_box_list[i])
-    
-    #print(np.mean(targets))
-    return targets
+        reg_targets[anch,:] = make_target(anchor_box_list[anch],
+                                          gt_box_list[i])
+
+    return cls_targets,reg_targets
+
 
 
 def move_boxes_to_canvas_space(boxes,ego_pose):

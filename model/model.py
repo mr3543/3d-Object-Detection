@@ -25,12 +25,17 @@ class PPFeatureNet(nn.Module):
     """
     def __init__(self,in_channels,out_channels):
         super(PPFeatureNet,self).__init__()
+        #self.bn0 = nn.BatchNorm1d(9*12000*100)
         self.conv1 = nn.Conv2d(in_channels,out_channels,kernel_size=1)
-        self.bn = nn.BatchNorm2d(out_channels)
+        self.bn1 = nn.BatchNorm2d(out_channels)
     def forward(self,x):
+        #x_sh = x.size()
+        #x = x.view(x_sh[0],-1)
+        #x = self.bn0(x)
+        #x = x.view(*x_sh)
         x = self.conv1(x)
         x = F.relu(x)
-        x = self.bn(x)
+        x = self.bn1(x)
         x = torch.max(x,dim=3)[0]
         return x
 

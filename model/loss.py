@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from config import cfg
+import pdb
+
 
 class PPLoss(nn.Module):
     """
@@ -11,39 +13,38 @@ class PPLoss(nn.Module):
         self.b_ort,self.b_reg,self.b_cls,self.gamma = b_ort,b_reg,b_cls,gamma
 
 
-    def forward(self,cls_tensor,reg_tensor,targets):
+    def forward(self,cls_tensor,reg_tensor,cls_targets,reg_targets):
         #cls_tensor: [batch,cls_channels,FM_H,FM_W]
         #reg_tensor: [batch,reg_channels,FM_H,FM_W]
-        #targets: [batch,FM_H*FM_W*anchor_dims,target_dims]
         #cls_channels = anchor_dims * (num_classes+1)
         #reg_channels = anchor_dims * reg_dims
-
-        c_sh = cls_tensor.size()
-        r_sh = reg_tensor.size()
         
-        cls_tensor = cls_tensor.view(c_sh[0],cfg.DATA.NUM_CLASSES + 1,
-                                     cfg.DATA.NUM_ANCHORS,c_sh[2],c_sh[3])
-        reg_tensor = reg_tensor.view(r_sh[0],cfg.DATA.REG_DIMS,cfg.DATA.NUM_ANCHORS,
-                                     r_sh[2],r_sh[3])
-        cls_tensor = cls_tensor.permute(0,3,4,2,1)
-        reg_tensor = reg_tensor.permute(0,3,4,2,1)
+        cls_tensor  = cls_tensor.permute(0,2,3,1)
+        cls_size    = cls_tensor.size()
+        cls_tensor  = cls_tensor.reshape(cls_size[0],-1)
+        cls_targets = cls_targets.reshape(cls_size[0],-1)
+        weight      = ((1 - torch.sigmoid(cls_tensor))**self.gamma).detach()
+        cls_loss    = F.binary_cross_entropy_with_logits(cls_tensor,cls_targets,weight=weight)        
 
-        cls_tensor = F.softmax(cls_tensor,dim=4)
-        anchor_classes = targets[...,-1].long()
-        cls_tensor = cls_tensor.view(-1,cls_tensor.size()[-1])
-        anchor_scores = cls_tensor[torch.arange(cls_tensor.size()[0]).long(),anchor_classes.view(-1).long()]
-        cls_loss = torch.sum(-(1 - anchor_scores)**self.gamma*torch.log(anchor_scores))
-
-        pos_anchors = torch.where(targets[...,0] == 1)
-        reg_targets = targets[pos_anchors][:,1:8]
-        reg_tensor = reg_tensor.reshape(reg_tensor.size()[0],-1,reg_tensor.size()[-1])
-        reg_scores = reg_tensor[pos_anchors][:,:7]
-        reg_loss = F.smooth_l1_loss(reg_scores,reg_targets,reduction='sum')
+        reg_tensor  = reg_tensor.permute(0,2,3,1)
+        reg_size    = reg_tensor.size()
+        reg_tensor  = reg_tensor.reshape(reg_size[0],-1,cfg.DATA.REG_DIMS)
+        pos_anchors = torch.where(reg_targets[...,0] == 1)
+        reg_scores  = reg_tensor[pos_anchors][...,:7]
+        loss_targs  = reg_targets[pos_anchors][...,1:8]
+        reg_loss    = F.smooth_l1_loss(reg_scores,loss_targs,reduction='mean')
         
-        ort_scores = F.softmax(reg_tensor[pos_anchors][:,7:9],dim=1)
-        ort_targets = targets[pos_anchors][:,8]
-        ort_targets = torch.stack((ort_targets,1- ort_targets),axis=1)
-        ort_loss = F.binary_cross_entropy(ort_scores,ort_targets)
+        ort_scores  = reg_tensor[pos_anchors][...,7:]
+        ort_targets = reg_targets[pos_anchors][...,8].long()
+        ort_loss    = F.cross_entropy(ort_scores,ort_targets)
 
-        num_pos = len(pos_anchors[0])
-        return 1/num_pos*(self.b_cls*cls_loss + self.b_ort*ort_loss + self.b_reg*reg_loss)
+        return self.b_cls*cls_loss + self.b_ort*ort_loss + self.b_reg*reg_loss
+
+
+
+
+
+
+
+
+
