@@ -13,7 +13,7 @@ pp_dataset = PPDataset(lidar_filepaths,data_dict,anchor_boxes,
 
 means = torch.zeros(10800000)
 for i in tqdm(range(len(pp_dataset))):
-    (p,_,__) = pp_dataset[i]
+    (p,_,__,___) = pp_dataset[i]
     p = p.reshape(-1)
     means = means*(i/(i+1)) + p*(1/(i+1))
 
