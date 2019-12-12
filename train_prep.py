@@ -12,7 +12,7 @@ from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
 from utils.box_utils import move_boxes_to_canvas_space
 
 
-"""
+
 def make_token_list(df,l5d):
     first_samples = df.first_sample_token.values
     token_list = []
@@ -81,7 +81,7 @@ for token in tqdm(token_list,total=len(token_list)):
 
 pickle.dump(data_dict,open('data_dict.pkl','wb'))
 pickle.dump(lidar_filepaths,open('lidar_filepaths.pkl','wb'))
-"""
+
 anchor_boxes,anchor_corners,anchor_centers = make_anchor_boxes()
 pickle.dump(anchor_boxes,open('anchor_boxes.pkl','wb'))
 pickle.dump(anchor_corners,open('anchor_corners.pkl','wb'))
