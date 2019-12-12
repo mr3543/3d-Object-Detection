@@ -11,6 +11,9 @@ cfg.NET = edict()
 #machine = 'kaggle'
 machine = 'cloud'
 
+if 'kaggle' in os.getcwd():
+    machine = 'kaggle'
+
 # data location paramers
 if machine == 'local':
     cfg.DATA.ROOT_DIR = '/home/mmr/lyft_dataset'
