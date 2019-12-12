@@ -13,7 +13,7 @@ from pyquaternion import Quaternion
 
 class PPDataset(torch.utils.data.Dataset):
     def __init__(self,lidars,data_dict,anchor_boxes,
-                 anchor_corners,anchor_centers,data_mean,training=True):
+                 anchor_corners,anchor_centers,data_mean=None,training=True):
         super(PPDataset,self).__init__()
         
         self.data_dict = data_dict
@@ -52,8 +52,9 @@ class PPDataset(torch.utils.data.Dataset):
         pillar = pillar.transpose([2,0,1])
         pillar_size = pillar.shape
         pillar = torch.from_numpy(pillar).float()
-        pillar = pillar.reshape(-1) - self.data_mean
-        pillar = pillar.reshape(pillar_size)
+        if self.data_mean:
+            pillar = pillar.reshape(-1) - self.data_mean
+            pillar = pillar.reshape(pillar_size)
         indices = torch.from_numpy(indices).long()
         if self.training:
             c_target,r_target = create_target(self.anchor_corners,gt_corners,

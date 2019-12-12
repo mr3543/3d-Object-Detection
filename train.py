@@ -37,7 +37,7 @@ anchor_centers = pickle.load(open('anchor_centers.pkl','rb'))
 data_mean = pickle.load(open('pillar_means.pkl','rb'))
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 pp_dataset = PPDataset(lidar_filepaths,data_dict,anchor_boxes,
-                       anchor_corners,anchor_centers,data_mean)
+                       anchor_corners,anchor_centers,data_mean=data_mean,training=True)
 
 batch_size = cfg.NET.BATCH_SIZE
 epochs = cfg.NET.EPOCHS

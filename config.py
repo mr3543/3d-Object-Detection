@@ -24,8 +24,8 @@ if machine == 'local':
 
 if machine == 'kaggle':
     cfg.DATA.ROOT_DIR = '/kaggle/input/3d-object-detection-for-autonomous-vehicles'
-    cfg.DATA.CKPT_DIR = '/kaggle/working/ckpts'
-    cfg.DATA.DATA_PATH = '.'
+    cfg.DATA.CKPT_DIR = '/kaggle/working/PointPillars/ckpts'
+    cfg.DATA.DATA_PATH = '/kaggle/input/3d-object-detection-for-autonomous-vehicles' 
     cfg.DATA.TRAIN_JSON_PATH = '/kaggle/input/3d-object-detection-for-autonomous-vehicles/train_data'
     cfg.DATA.BOX_DIR = '/kaggle/working/PointPillars/boxes/'
 
