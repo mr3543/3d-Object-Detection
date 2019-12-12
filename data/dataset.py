@@ -52,7 +52,7 @@ class PPDataset(torch.utils.data.Dataset):
         pillar = pillar.transpose([2,0,1])
         pillar_size = pillar.shape
         pillar = torch.from_numpy(pillar).float()
-        if self.data_mean:
+        if self.data_mean is not None:
             pillar = pillar.reshape(-1) - self.data_mean
             pillar = pillar.reshape(pillar_size)
         indices = torch.from_numpy(indices).long()
