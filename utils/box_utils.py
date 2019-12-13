@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import torch
 import time
 import os
 import sys
@@ -11,6 +12,64 @@ from pyquaternion import Quaternion
 from lyft_dataset_sdk.utils.data_classes import LidarPointCloud, Box
 from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
 from lyft_dataset_sdk.lyftdataset import LyftDataset
+
+def create_pillars_py(lidar_pts,max_pts_per_pillar,
+                      max_pillars,x_step,y_step,
+                      x_min,y_min,z_min,
+                      x_max,y_max,z_max):
+
+    L = pd.DataFrame(lidar_pts,columns=['x','y','z','r'])
+    invalid = (L['x'] < x_min) | (L['x'] > x_max) | (L['y'] < y_min) | (L['y'] > y_max) | \
+              (L['z'] < z_min) | (L['z'] > z_max)
+    L = L[~invalid]
+    L['canv_x'] = np.floor((L['x'] - x_min)/x_step)
+    L['canv_y'] = np.floor((L['y'] - y_min)/y_step)
+    
+    L['xp'],L['yp'] = L['x'] - L['canv_x'],L['y'] - L['canv_y']
+    gb = L.groupby(['canv_x','canv_y'])
+    means = gb.transform('mean')
+    L['xc'],L['yc'],L['zc'] = L['x'] - means['x'], L['y'] - means['y'], L['z'] - means['z']
+    features = ['x','y','z','r','xp','yp','xc','yc','zc']
+    pillars = np.zeros((max_pillars,max_pts_per_pillar,len(features)))
+    p_xy = np.zeros((max_pillars,3))
+
+    for i,g in enumerate(gb.groups):
+        grp_inds = gb.groups[g]
+        to_sample = min(max_pts_per_pillar,len(grp_inds))
+        inds = np.random.choice(grp_inds,to_sample)
+        pillars[np.array([i]*to_sample),np.arange(to_sample),:] = L.loc[inds,features].values
+        p_xy[i,0],p_xy[i,1],p_xy[i,2] = 1,g[0],g[1]
+        
+    return pillars,p_xy
+
+
+def make_target_torch(anchor_box,gt_box):
+
+    ax,ay,az = anchor_box.center
+    gx,gy,gz = gt_box.center
+    aw,al,ah = anchor_box.wlh
+    gw,gl,gh = gt_box.wlh
+    ad = np.sqrt(aw**2 + al**2)
+    at = anchor_box.orientation.yaw_pitch_roll[0]
+    gt = gt_box.orientation.yaw_pitch_roll[0]
+
+    dx = (gx - ax)/ad
+    dy = (gy - ay)/ad
+    dz = (gz - az)/ah
+
+    dw = np.log(gw/aw)
+    dl = np.log(gl/al)
+    dh = np.log(gh/ah)
+
+    dt = np.sin(gt - at)
+
+    if gt > 0:
+        ort = 1
+    else:
+        ort = 0
+    
+    return torch.Tensor([1,dx,dy,dz,dw,dl,dh,dt,ort])
+
 
 
 def make_target(anchor_box,gt_box):
@@ -69,6 +128,48 @@ def make_anchor_boxes():
                 corners_list.append(box.bottom_corners()[:2,:].transpose([1,0]))
                 centers_list.append([x_center,y_center,z_center])
     return boxes_list,np.array(corners_list),np.array(centers_list)
+
+def create_target_torch(anchor_corners,
+                  gt_corners,
+                  anchor_centers,
+                  gt_centers,
+                  anchor_box_list,
+                  gt_box_list,
+                  device):
+   
+    pos_thresh = cfg.DATA.IOU_POS_THRESH
+    
+    ious = np.zeros((len(anchor_box_list),len(gt_box_list)))
+    pillars.make_ious(anchor_corners,gt_corners,
+                   anchor_centers,gt_centers,ious)
+   
+    ious = torch.from_numpy(ious).to(device) 
+    cls_targets = torch.zeros((len(anchor_box_list),cfg.DATA.NUM_CLASSES)).to(device)
+    reg_targets = torch.zeros((len(anchor_box_list),cfg.DATA.REG_DIMS)).to(device)
+    
+    gt_box_classes = torch.from_numpy(np.array([cfg.DATA.NAME_TO_IND[box.name] for box in gt_box_list])).long()
+    
+    max_ious,arg_max_ious = torch.max(ious,dim=1)
+    pos_anchors = torch.where(max_ious > pos_thresh)[0]
+    pos_boxes = arg_max_ious[pos_anchors]
+    
+    ious = ious.permute([1,0])
+    top_anchor_for_box = torch.max(ious,dim=1)[1]
+    
+    cls_targets[pos_anchors,gt_box_classes[pos_boxes]] = 1
+    cls_targets[top_anchor_for_box,:] = 0
+    cls_targets[top_anchor_for_box,gt_box_classes] = 1 
+
+    for i,anch in enumerate(pos_anchors):
+        reg_targets[anch,:] = make_target_torch(anchor_box_list[anch],
+                                          gt_box_list[pos_boxes[i]]).to(device)
+
+    for i,anch in enumerate(top_anchor_for_box):
+        reg_targets[anch,:] = make_target_torch(anchor_box_list[anch],
+                                          gt_box_list[i]).to(device)
+
+    return cls_targets,reg_targets
+
 
 def create_target(anchor_corners,
                   gt_corners,

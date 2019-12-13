@@ -179,7 +179,7 @@ void make_target(py::array_t<double> &a_ctrs,
 
     double ort = 1;
     if (gt < 0){
-        ort = -1;
+        ort = 0;
     }
 
     targets.mutable_at(target_ind,0) = 1;
@@ -191,7 +191,6 @@ void make_target(py::array_t<double> &a_ctrs,
     targets.mutable_at(target_ind,6) = dh;
     targets.mutable_at(target_ind,7) = dt;
     targets.mutable_at(target_ind,8) = ort;
-    targets.mutable_at(target_ind,9) = class_ind;
 
 }
 

@@ -6,7 +6,7 @@ import numpy as np
 import data.pillars as pillars
 import pickle
 from config import cfg
-from utils.box_utils import move_boxes_to_canvas_space,create_target
+from utils.box_utils import move_boxes_to_canvas_space,create_target,create_pillars_py
 from lyft_dataset_sdk.utils.data_classes import LidarPointCloud
 from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
 from pyquaternion import Quaternion
@@ -40,15 +40,19 @@ class PPDataset(torch.utils.data.Dataset):
             gt_centers = np.array([box.center for box in boxes])
         
         lidar_points = lidar_pointcloud.points
-        pillar = np.zeros((cfg.DATA.MAX_PILLARS,cfg.DATA.MAX_POINTS_PER_PILLAR,9))
-        indices = np.zeros((cfg.DATA.MAX_PILLARS,3))
+        #pillar = np.zeros((cfg.DATA.MAX_PILLARS,cfg.DATA.MAX_POINTS_PER_PILLAR,9))
+        #indices = np.zeros((cfg.DATA.MAX_PILLARS,3))
         
-        pillars.create_pillars(lidar_points.transpose([1,0]),pillar,
-                            indices,cfg.DATA.MAX_POINTS_PER_PILLAR,
-                            cfg.DATA.MAX_PILLARS,cfg.DATA.X_STEP,cfg.DATA.Y_STEP,
-                            cfg.DATA.X_MIN,cfg.DATA.Y_MIN,cfg.DATA.Z_MIN,
-                            cfg.DATA.X_MAX,cfg.DATA.Y_MAX,cfg.DATA.Z_MAX,
-                            cfg.DATA.CANVAS_HEIGHT)
+        #pillars.create_pillars(lidar_points.transpose([1,0]),pillar,
+        #                    indices,cfg.DATA.MAX_POINTS_PER_PILLAR,
+        #                    cfg.DATA.MAX_PILLARS,cfg.DATA.X_STEP,cfg.DATA.Y_STEP,
+        #                    cfg.DATA.X_MIN,cfg.DATA.Y_MIN,cfg.DATA.Z_MIN,
+        #                    cfg.DATA.X_MAX,cfg.DATA.Y_MAX,cfg.DATA.Z_MAX,
+        #                    cfg.DATA.CANVAS_HEIGHT)
+        pillar,indices = create_pillars_py(lidar_points.transpose([1,0]),cfg.DATA.MAX_POINTS_PER_PILLAR,
+                                            cfg.DATA.MAX_PILLARS,cfg.DATA.X_STEP,cfg.DATA.Y_STEP,
+                                            cfg.DATA.X_MIN,cfg.DATA.Y_MIN,cfg.DATA.Z_MIN,
+                                            cfg.DATA.X_MAX,cfg.DATA.Y_MAX,cfg.DATA.Z_MAX)
         pillar = pillar.transpose([2,0,1])
         pillar_size = pillar.shape
         pillar = torch.from_numpy(pillar).float()
