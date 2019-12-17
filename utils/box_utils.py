@@ -130,9 +130,9 @@ def make_anchor_boxes():
                 corners_list.append(bc[:,:2])
                 centers_list.append([x_center,y_center,z_center])
                 if yaw > 0:
-                    xy_list.append(np.concatenate((bc[1,:],bc[3,:])))
+                    xy_list.append(np.concatenate((bc[1,:2],bc[3,:2])))
                 else:
-                    xy_list.append(np.concatenate((bc[2,:],bc[0,:]))) 
+                    xy_list.append(np.concatenate((bc[2,:2],bc[0,:2]))) 
                 
     return boxes_list,np.array(corners_list),np.array(centers_list),np.array(xy_list)
 

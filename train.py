@@ -10,7 +10,7 @@ from apex import amp
 import sys
 import pdb
 import os.path as osp
-from evaluate import evaluate
+from evaluate import evaluate,evaluate_single
 
 
 def get_batch(dataset,batch_size):
@@ -60,8 +60,8 @@ dataloader  = torch.utils.data.DataLoader(pp_dataset,batch_size,
 pp_model = PPModel(fn_in,fn_out,cls_channels,reg_channels,device)
 pp_loss  = PPLoss(cfg.NET.B_ORT,cfg.NET.B_REG,cfg.NET.B_CLS,cfg.NET.GAMMA,device)
 
-model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint0_500.pth')
-pp_model.load_state_dict(torch.load(model_fp))
+#model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint0_150.pth')
+#pp_model.load_state_dict(torch.load(model_fp))
 pp_model = pp_model.to(device)
 pp_loss  = pp_loss.to(device)
 
@@ -79,14 +79,15 @@ pp_model.backbone = LSUVinit(pp_model.backbone,scatter_out,needed_std = 1.0, std
 backbone_out = pp_model.backbone(scatter_out)
 pp_model.det_head = LSUVinit(pp_model.det_head,backbone_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
 
+
 lr = cfg.NET.LEARNING_RATE
 wd = cfg.NET.WEIGHT_DECAY
 
 
 params = list(pp_model.parameters())
 optim  = torch.optim.Adam(params,lr=lr,weight_decay=wd)
-optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint0_500.pth')
-optim.load_state_dict(torch.load(optim_fp))
+#optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint0_150.pth')
+#optim.load_state_dict(torch.load(optim_fp))
 
 #pp_model,optim = amp.initialize(pp_model,optim,opt_level="O1")
 
@@ -101,15 +102,26 @@ for layer in pp_model.modules():
 print('STARTING TRAINING')
 
 
+pillar,inds,c_target,r_target = pp_dataset[0]
+pillar,inds,c_target,r_target = pillar[None,...],inds[None,...],c_target[None,...],r_target[None,...]
+pillar = pillar.to(device)
+inds = inds.to(device)
+c_target = c_target.to(device)
+r_target = r_target.to(device)
+
+
 for epoch in range(epochs):
     print('EPOCH: ',epoch)
     epoch_losses = []
-    progress_bar = tqdm(dataloader)
-    for i,(pillar,inds,c_target,r_target) in enumerate(progress_bar):
-        pillar = pillar.to(device)
-        inds = inds.to(device)
-        c_target = c_target.to(device)
-        r_target = r_target.to(device)
+    #progress_bar = tqdm(dataloader)
+    #for i,(pillar,inds,c_target,r_target) in enumerate(progress_bar):
+    i =0
+    while True:
+    
+        #pillar = pillar.to(device)
+        #inds = inds.to(device)
+        #c_target = c_target.to(device)
+        #r_target = r_target.to(device)
         cls_tensor,reg_tensor = pp_model(pillar,inds)
         batch_loss = pp_loss(cls_tensor,reg_tensor,c_target,r_target) 
         optim.zero_grad()
@@ -117,13 +129,17 @@ for epoch in range(epochs):
         #    scaled_loss.backward()
         batch_loss.backward()
         optim.step()
-        
+
         if i % 25 == 0:
-           # with torch.no_grad():
-           #     evaluate(pp_model,anchor_boxes,data_mean,device)
+            print('loss :',batch_loss)        
+            
+        if i % 150 == 0 and i != 0:
+            with torch.no_grad():
+                pdb.set_trace()
+                evaluate_single(pp_model,anchor_boxes,data_mean,device,pillar,inds)
             print('loss: ',batch_loss)
-    
-        if i != 0 and i % 100 == 0:
+        """
+        if i != 0 and i % 1000 == 0:
             print('saving model ckpt')
             cpd = cfg.DATA.CKPT_DIR
             model_ckpt = osp.join(cpd,'pp_checkpoint{}_{}.pth'.format(epoch,i))
@@ -131,7 +147,6 @@ for epoch in range(epochs):
             torch.save(pp_model.state_dict(),model_ckpt)
             optim_ckpt = osp.join(cpd,'optim_checkpoint{}_{}.pth'.format(epoch,i))
             torch.save(optim.state_dict(),optim_ckpt)
-        if i != 0 and i % 500 == 0:
-            with torch.no_grad():
-                evaluate(pp_model,anchor_boxes,data_mean,device)
+        """
+        i += 1 
     epoch_losses.append(batch_loss.detach().cpu().numpy())

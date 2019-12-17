@@ -11,6 +11,17 @@ from lyft_dataset_sdk.utils.data_classes import Box
 from lyft_dataset_sdk.eval.detection.mAP_evaluation import get_average_precisions
 from torchvision.ops import nms    
 
+def make_box_dict(box,token,score):
+    bd = {'sample_token': token,
+         'translation' : list(box.center),
+         'size'        : list(box.wlh),
+         'rotation'    : list(box.orientation),
+         'name'        : box.name}
+    if score:
+        bd['score'] = box.score
+    
+    return bd
+    
 def make_pred_boxes(inds,anchor_box_list,reg,classes,scores,token):
     
     out_box_list = []
@@ -46,6 +57,8 @@ def make_pred_boxes(inds,anchor_box_list,reg,classes,scores,token):
 
         out_box_list.append(box)
 
+    return out_box_list
+
 def move_box_to_car_space(box):
     x,y,z = box.center
     w,l,h = box.wlh
@@ -75,10 +88,63 @@ def to_xy(box):
 
 def box_nms(pos_inds,anchor_xy,scores,thresh):
     #nms_boxes = torch.Tensor([to_xy(anchor_box_list[i]) for i in pos_inds])
-    pdb.set_trace()
     nms_boxes = torch.from_numpy(anchor_xy).float()[pos_inds]
     scores    = scores.cpu()
     return nms(nms_boxes,scores,thresh)
+
+def evaluate_single(pp_model,anchor_box_list,data_mean,device,
+                    p,inds):
+
+    lidars_fp    = osp.join(cfg.DATA.LIDAR_TRAIN_DIR,'lidar_filepaths.pkl')
+    data_dict_fp = osp.join(cfg.DATA.LIDAR_TRAIN_DIR,'data_dict.pkl')
+    token_fp     = osp.join(cfg.DATA.TOKEN_TRAIN_DIR,'training_tokens.pkl')
+    anch_xy_fp   = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_xy.pkl')
+
+    lidar_filepaths = pickle.load(open(lidars_fp,'rb'))
+    data_dict       = pickle.load(open(data_dict_fp,'rb'))
+    data_mean       = pickle.load(open('pillar_means.pkl','rb')) 
+    token_list      = pickle.load(open(token_fp,'rb'))
+    anchor_xy       = pickle.load(open(anch_xy_fp,'rb'))
+
+    cls,reg = pp_model(p,inds)
+        
+    cls            = cls.permute(0,2,3,1).reshape(-1,cfg.DATA.NUM_CLASSES)
+    cls            = torch.sigmoid(cls)
+    scores,classes = torch.max(cls,dim=-1)
+    pos_inds       = torch.where(scores > cfg.DATA.VAL_POS_THRESH)[0]
+    
+    print(len(pos_inds))
+    print(torch.max(scores))
+    to_keep        = box_nms(pos_inds,anchor_xy,scores[pos_inds],cfg.DATA.VAL_NMS_THRESH)
+    final_box_inds = pos_inds[to_keep]
+     
+    final_boxes    = make_pred_boxes(final_box_inds,anchor_box_list,reg,classes,scores,
+                                     token_list[i])
+    pdb.set_trace()
+    gt_boxes_fp    = data_dict[lidar_filepaths[i]]['boxes']
+    gt_boxes       = pickle.load(open(gt_boxes_fp,'rb'))
+    i=0    
+    for box in gt_boxes:
+        move_box_to_car_space(box)
+        box_dict = make_box_dict(box,token_list[i],score=False)
+        gt_box_list.append(box_dict)
+
+    for box in final_boxes:
+        move_box_to_car_space(box)
+        box_dict = make_box_dict(box,token_list[i],score=True)
+        pred_box_list.append(box_dict)
+
+    map_list = []
+    for thresh in cfg.DATA.VAL_THRESH_LIST:
+        thresh_ap = get_average_precisions(gt_box_list,pred_box_list,
+                                        cfg.DATA.CLASS_NAMES,thresh)
+        map_list.append(thresh)
+
+    print('---------VALIDATON SET-----------')
+    print('VAL mAP: ',np.mean(map_list))
+    print('---------------------------------')
+
+
 
 def evaluate(pp_model,anchor_box_list,data_mean,device):
 
@@ -121,10 +187,11 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
         scores,classes = torch.max(cls,dim=-1)
         pos_inds       = torch.where(scores > cfg.DATA.VAL_POS_THRESH)[0]
         
-        pdb.set_trace()
+        print(len(pos_inds))
+        print(torch.max(scores))
         to_keep        = box_nms(pos_inds,anchor_xy,scores[pos_inds],cfg.DATA.VAL_NMS_THRESH)
         final_box_inds = pos_inds[to_keep]
-        
+         
         final_boxes    = make_pred_boxes(final_box_inds,anchor_box_list,reg,classes,scores,
                                          token_list[i])
         gt_boxes_fp    = data_dict[lidar_filepaths[i]]['boxes']
@@ -132,12 +199,12 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
         
         for box in gt_boxes:
             move_box_to_car_space(box)
-            box_dict = make_box_dict(box,token_list[i])
+            box_dict = make_box_dict(box,token_list[i],score=False)
             gt_box_list.append(box_dict)
 
-        for box in t_boxes:
+        for box in final_boxes:
             move_box_to_car_space(box)
-            box_dict = make_box_dict(box,token_list[i])
+            box_dict = make_box_dict(box,token_list[i],score=True)
             pred_box_list.append(box_dict)
     
     map_list = []

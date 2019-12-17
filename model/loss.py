@@ -24,11 +24,13 @@ class PPLoss(nn.Module):
         cls_size    = cls_tensor.size()
         cls_tensor  = cls_tensor.reshape(cls_size[0],-1)
         cls_targets = cls_targets.reshape(cls_size[0],-1)
-        weight      = torch.where(cls_targets == 1,(1 - torch.sigmoid(cls_tensor)**self.gamma),
-                                                   (1 - (1 - torch.sigmoid(cls_tensor)))**self.gamma).detach()
-        #weight      = ((1 - torch.sigmoid(cls_tensor))**self.gamma).detach()
-        cls_loss    = F.binary_cross_entropy_with_logits(cls_tensor,cls_targets,weight=weight)        
-
+        p           = torch.sigmoid(cls_tensor)
+        pt          = torch.where(cls_targets == 1,p,1-p)
+        at          = torch.where(cls_targets == 1,torch.ones(pt.size(),device=self.device)*1000,torch.ones(pt.size(),device=self.device))
+        w           = (at*(1-pt)**self.gamma).detach()
+        
+        cls_loss    = F.binary_cross_entropy_with_logits(cls_tensor,cls_targets,weight=w)        
+        #pdb.set_trace()
         reg_tensor  = reg_tensor.permute(0,2,3,1)
         reg_size    = reg_tensor.size()
         reg_tensor  = reg_tensor.reshape(reg_size[0],-1,cfg.DATA.REG_DIMS)

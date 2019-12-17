@@ -94,9 +94,8 @@ pickle.dump(anchor_corners,open(osp.join(a_dir,'anchor_corners.pkl'),'wb'))
 pickle.dump(anchor_centers,open(osp.join(a_dir,'anchor_centers.pkl'),'wb'))
 pickle.dump(anchor_xy,open(osp.join(a_dir,'anchor_xy.pkl'),'wb'))
 
-pickle.dump(token_list[0],open(osp.join(cfg.DATA.TOKEN_TRAIN_DIR,'training_tokens.pkl'),'wb'))
-pickle.dump(token_list[1],open(osp.join(cfg.DATA.TOKEN_VAL_DIR,'val_tokens.pkl'),'wb'))
-
+pickle.dump(token_lists[0],open(osp.join(cfg.DATA.TOKEN_TRAIN_DIR,'training_tokens.pkl'),'wb'))
+pickle.dump(token_lists[1],open(osp.join(cfg.DATA.TOKEN_VAL_DIR,'val_tokens.pkl'),'wb'))
 
 
 
