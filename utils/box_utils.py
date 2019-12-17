@@ -101,33 +101,40 @@ def make_target(anchor_box,gt_box):
 
 def make_anchor_boxes():
     
-    fm_height = cfg.DATA.FM_HEIGHT
-    fm_width = cfg.DATA.FM_WIDTH
-    fm_scale = cfg.DATA.FM_SCALE
+    fm_height   = cfg.DATA.FM_HEIGHT
+    fm_width    = cfg.DATA.FM_WIDTH
+    fm_scale    = cfg.DATA.FM_SCALE
     anchor_dims = cfg.DATA.ANCHOR_DIMS
     anchor_yaws = cfg.DATA.ANCHOR_YAWS
-    anchor_zs = cfg.DATA.ANCHOR_ZS
+    anchor_zs   = cfg.DATA.ANCHOR_ZS
 
     corners_list = []
-    boxes_list = []
+    boxes_list   = []
     centers_list = []
+    xy_list      = []
     for y in tqdm(range(0,fm_height)):
         for x in range(0,fm_width):
             for d in range(0,len(anchor_dims)):
                 x_center = (x + 0.5)/fm_scale
                 y_center = (y + 0.5)/fm_scale
                 z_center = anchor_zs[d]
-                width = anchor_dims[d][0]
+                width  = anchor_dims[d][0]
                 length = anchor_dims[d][1]
                 height = anchor_dims[d][2]
-                yaw = anchor_yaws[d]
+                yaw  = anchor_yaws[d]
                 quat = Quaternion(axis=[0,0,1],degrees = yaw)
-                box = Box(center=[x_center,y_center,z_center],size=[width,length,height],
+                box  = Box(center=[x_center,y_center,z_center],size=[width,length,height],
                           orientation=quat)
                 boxes_list.append(box)
-                corners_list.append(box.bottom_corners()[:2,:].transpose([1,0]))
+                bc = box.bottom_corners().transpose([1,0])
+                corners_list.append(bc[:,:2])
                 centers_list.append([x_center,y_center,z_center])
-    return boxes_list,np.array(corners_list),np.array(centers_list)
+                if yaw > 0:
+                    xy_list.append(np.concatenate((bc[1,:],bc[3,:])))
+                else:
+                    xy_list.append(np.concatenate((bc[2,:],bc[0,:]))) 
+                
+    return boxes_list,np.array(corners_list),np.array(centers_list),np.array(xy_list)
 
 def create_target_torch(anchor_corners,
                   gt_corners,
@@ -264,5 +271,3 @@ def move_boxes_to_canvas_space(boxes,ego_pose):
     return box_list
 
 
-if __name__ == '__main__':
-    a,b,c = make_anchor_boxes()

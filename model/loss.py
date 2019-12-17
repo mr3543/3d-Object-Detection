@@ -8,9 +8,9 @@ import pdb
 class PPLoss(nn.Module):
     """
     """
-    def __init__(self,b_ort,b_reg,b_cls,gamma):
+    def __init__(self,b_ort,b_reg,b_cls,gamma,device):
         super(PPLoss,self).__init__()
-        self.b_ort,self.b_reg,self.b_cls,self.gamma = b_ort,b_reg,b_cls,gamma
+        self.b_ort,self.b_reg,self.b_cls,self.gamma,self.device = b_ort,b_reg,b_cls,gamma,device
 
 
     def forward(self,cls_tensor,reg_tensor,cls_targets,reg_targets):
@@ -18,12 +18,15 @@ class PPLoss(nn.Module):
         #reg_tensor: [batch,reg_channels,FM_H,FM_W]
         #cls_channels = anchor_dims * (num_classes+1)
         #reg_channels = anchor_dims * reg_dims
-        
+       
+        #pdb.set_trace() 
         cls_tensor  = cls_tensor.permute(0,2,3,1)
         cls_size    = cls_tensor.size()
         cls_tensor  = cls_tensor.reshape(cls_size[0],-1)
         cls_targets = cls_targets.reshape(cls_size[0],-1)
-        weight      = ((1 - torch.sigmoid(cls_tensor))**self.gamma).detach()
+        weight      = torch.where(cls_targets == 1,(1 - torch.sigmoid(cls_tensor)**self.gamma),
+                                                   (1 - (1 - torch.sigmoid(cls_tensor)))**self.gamma).detach()
+        #weight      = ((1 - torch.sigmoid(cls_tensor))**self.gamma).detach()
         cls_loss    = F.binary_cross_entropy_with_logits(cls_tensor,cls_targets,weight=weight)        
 
         reg_tensor  = reg_tensor.permute(0,2,3,1)
