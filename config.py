@@ -92,6 +92,8 @@ cfg.DATA.IOU_NEG_THRESH = .45
 cfg.DATA.TRAIN_DATA_FOLDER = osp.join(cfg.DATA.ROOT_DIR,'data/training_data')
 cfg.DATA.VAL_DATA_FOLDER   = osp.join(cfg.DATA.ROOT_DIR,'data/validation_data')
 cfg.DATA.NAME_TO_IND       = {'animal':0,'bicycle':1,'bus':2,'car':3,'emergency_vehicle':4,'motorcycle':5,'other_vehicle':6,'pedestrian':7,'truck':8}
+cfg.DATA.IND_TO_NAME       = {'0':'animal','1':'bicycle','2':'bus','3':'car','4':'emergency_vehicle','5':'motorcycle','6':'other_vehicle','7':'pedestrian','8':'truck'}
+
 
 # model parameters
 cfg.NET.FEATURE_NET_IN  = 9
@@ -112,6 +114,6 @@ cfg.NET.GAMMA = 3
 
 cfg.NET.VAL_MODEL = ''
 cfg.DATA.VAL_POS_THRESH = .5
-cfg.DATA.VAL_NMS_THRESH = .5
+cfg.DATA.VAL_NMS_THRESH = .3
 cfg.DATA.VAL_THRESH_LIST = np.arange(.5,1.0,0.05)
 

@@ -25,11 +25,14 @@ def make_box_dict(box,token,score):
 def make_pred_boxes(inds,anchor_box_list,reg,classes,scores,token):
     
     out_box_list = []
-    for i in inds:
+    reg = reg.cpu().numpy()
+    classes = classes.cpu().numpy()
+    scores = scores.cpu().numpy()
+    for j,i in enumerate(inds):
         
         a_box      = anchor_box_list[i]
         offsets    = reg[i,:] 
-        a_box_diag = np.sqrt(a_box.size[0]**2 + a_box.size[1]**2)
+        a_box_diag = np.sqrt(a_box.wlh[0]**2 + a_box.wlh[1]**2)
         
         box_x = a_box.center[0] + offsets[0] * a_box_diag
         box_y = a_box.center[1] + offsets[1] * a_box_diag
@@ -39,18 +42,19 @@ def make_pred_boxes(inds,anchor_box_list,reg,classes,scores,token):
         box_l = np.exp(offsets[4])*a_box.wlh[1]
         box_h = np.exp(offsets[5])*a_box.wlh[2]
 
-        box_name = cfg.DATA.IND_TO_NAME[classes[i]]
-
+        box_name = cfg.DATA.IND_TO_NAME[str(int(classes[i]))]
         box_yaw = np.arcsin(offsets[6]) + a_box.orientation.yaw_pitch_roll[0]
+        #print('offsets: {}, yaw: {}, i: {}'.format(offsets[6],box_yaw,j))
         if offsets[7] > offsets[8]:
             box_ort = 1
         else:
             box_ort = -1
         
         box_yaw *= box_ort
+        quat = Quaternion(axis=[0,0,1],radians = box_yaw) 
         box = Box(center=[box_x,box_y,box_z],
                   size = [box_w,box_l,box_h],
-                  orientation=Quaternion([box_yaw,0,0]),
+                  orientation=quat,
                   name=box_name,
                   score=scores[i],
                   token=token)
@@ -109,7 +113,9 @@ def evaluate_single(pp_model,anchor_box_list,data_mean,device,
     cls,reg = pp_model(p,inds)
         
     cls            = cls.permute(0,2,3,1).reshape(-1,cfg.DATA.NUM_CLASSES)
+    reg            = reg.permute(0,2,3,1).reshape(-1,cfg.DATA.REG_DIMS)
     cls            = torch.sigmoid(cls)
+    reg[...,6]     = torch.tanh(reg[...,6])
     scores,classes = torch.max(cls,dim=-1)
     pos_inds       = torch.where(scores > cfg.DATA.VAL_POS_THRESH)[0]
     
@@ -184,6 +190,7 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
         
         cls            = cls.permute(0,2,3,1).reshape(-1,cfg.DATA.NUM_CLASSES)
         cls            = torch.sigmoid(cls)
+        reg[...,6]     = torch.tanh(reg[...,6])
         scores,classes = torch.max(cls,dim=-1)
         pos_inds       = torch.where(scores > cfg.DATA.VAL_POS_THRESH)[0]
         
