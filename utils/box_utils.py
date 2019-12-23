@@ -13,6 +13,16 @@ from lyft_dataset_sdk.utils.data_classes import LidarPointCloud, Box
 from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
 from lyft_dataset_sdk.lyftdataset import LyftDataset
 
+def boxes_to_image_space(boxes):
+    centers = np.stack([box.center.copy() for box in boxes])
+    corners = np.stack([box.bottom_corners().transpose([1,0])[:,:2] for box in boxes])
+
+    centers[...,1] = (cfg.DATA.CANVAS_HEIGHT - 1) - centers[...,1]
+    corners[...,1] = (cfg.DATA.CANVAS_HEIGHT - 1) - corners[...,1]
+
+    return centers,corners
+
+
 def create_pillars_py(lidar_pts,max_pts_per_pillar,
                       max_pillars,x_step,y_step,
                       x_min,y_min,z_min,
@@ -224,7 +234,7 @@ def create_target(anchor_corners,
 def move_boxes_to_canvas_space(boxes,ego_pose):
 
    # print('STARING MOVE BOXES')
-    box_list = []
+    #box_list = []
     x_min = cfg.DATA.X_MIN
     x_max = cfg.DATA.X_MAX
     y_min = cfg.DATA.Y_MIN
@@ -254,7 +264,7 @@ def move_boxes_to_canvas_space(boxes,ego_pose):
         box_x = (box_x - cfg.DATA.X_MIN)/x_step
         box_y = (box_y - cfg.DATA.Y_MIN)/y_step
 
-        box_y = (canvas_height - 1) - box_y
+        #box_y = (canvas_height - 1) - box_y
 
         box_w,box_l,box_h = box.wlh
         box_w /= y_step
@@ -265,9 +275,8 @@ def move_boxes_to_canvas_space(boxes,ego_pose):
         
         #print('CANVAS BOX LOC: ',box.center)
         #print('CANVAS BOX SIZE: ',box.wlh)
-        box_list.append(box)
-    
-   # print('RETURNING {} BOXES '.format(len(box_list)))
-    return box_list
+        #box_list.append(box)
+
+    #return box_list
 
 

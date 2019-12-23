@@ -12,7 +12,8 @@
 
 namespace py = pybind11;
 namespace bg = boost::geometry;
-typedef bg::model::polygon<bg::model::d2::point_xy<double>,false,false> Polygon;
+typedef bg::model::polygon<bg::model::d2::point_xy<double>,true,false> Polygon;
+typedef bg::model::polygon<bg::model::d2::point_xy<double>,false,false> Polygon_cc;
 
 PillarPoint::PillarPoint(double x,double y,double z,double r,
                          double canvas_x,double canvas_y)
@@ -108,7 +109,7 @@ double iou(py::array_t<double> &anchor_corners,
            int gt_index)
 {
     
-    Polygon anchor{{{anchor_corners.at(anchor_index,0,0),anchor_corners.at(anchor_index,0,1)},
+    Polygon_cc anchor{{{anchor_corners.at(anchor_index,0,0),anchor_corners.at(anchor_index,0,1)},
                    {anchor_corners.at(anchor_index,1,0),anchor_corners.at(anchor_index,1,1)},
                    {anchor_corners.at(anchor_index,2,0),anchor_corners.at(anchor_index,2,1)},
                    {anchor_corners.at(anchor_index,3,0),anchor_corners.at(anchor_index,3,1)}}};
@@ -126,7 +127,15 @@ double iou(py::array_t<double> &anchor_corners,
     double int_area = bg::area(output[0]);
     double iou = int_area/(bg::area(anchor) + bg::area(gt_box) - int_area);
     if (iou < 0){
-        std::cout << "IOU < 0 " << std::endl;
+        std::cout << "IOU < 0 " << gt_index << std::endl;
+        /*
+        std::cout << "gt box area: " << bg::area(gt_box) << std::endl;
+        std::cout << "iou: " << iou << std::endl;
+        std::cout << "C1: " << gt_corners.at(gt_index,0,0) << " " << gt_corners.at(gt_index,0,1) << std::endl;
+        std::cout << "C2: " << gt_corners.at(gt_index,1,0) << " " << gt_corners.at(gt_index,1,1) << std::endl;
+        std::cout << "C3: " << gt_corners.at(gt_index,2,0) << " " << gt_corners.at(gt_index,2,1) << std::endl;
+        std::cout << "C4: " << gt_corners.at(gt_index,3,0) << " " << gt_corners.at(gt_index,3,1) << std::endl;
+        */
         std::exit(1); 
     }
     return iou;    

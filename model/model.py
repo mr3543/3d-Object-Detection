@@ -123,7 +123,12 @@ class PPBackbone(nn.Module):
         self.down2 = PPDownBlock(6,in_channels,2*in_channels)
         self.up2 = PPUpBlock(in_channels*2,2*in_channels,2,1,1)
         self.down3 = PPDownBlock(6,2*in_channels,4*in_channels)
-        self.up3 = PPUpBlock(in_channels*4,in_channels*2,4,1,1)
+        self.up3 = PPUpBlock(in_channels*4,in_channels*2,4,1,3)
+        #up block padding: 
+        #for canv of 500x500: up1 (1,1,0), up2 (2,1,1), up3 (4,1,1)
+        #for canv of 600x600: up1 (1,1,0), up2 (2,1,1), up3 (4,1,3)
+
+
 
     def forward(self,x):
         x = self.down1(x)

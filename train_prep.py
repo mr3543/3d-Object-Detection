@@ -11,7 +11,7 @@ from pyquaternion import Quaternion
 from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
 from utils.box_utils import move_boxes_to_canvas_space
 
-
+"""
 def make_token_list(df,l5d):
     first_samples = df.first_sample_token.values
     token_list = []
@@ -75,7 +75,7 @@ for token_list,box_dir,lidar_dir in zip(token_lists,box_dirs,lidar_dirs):
                                             Quaternion(calibrated_sensor['rotation']),
                                             inverse = False)
         boxes = l5d.get_boxes(sample_lidar_token)
-        boxes = move_boxes_to_canvas_space(boxes,ego_pose)
+        move_boxes_to_canvas_space(boxes,ego_pose)
         lidar_filepath = str(l5d.get_sample_data_path(sample_lidar_token))
         lidar_filepaths.append(lidar_filepath)
         box_filepath = osp.join(box_dir,token + '_boxes.pkl')
@@ -96,7 +96,73 @@ pickle.dump(anchor_xy,open(osp.join(a_dir,'anchor_xy.pkl'),'wb'))
 
 pickle.dump(token_lists[0],open(osp.join(cfg.DATA.TOKEN_TRAIN_DIR,'training_tokens.pkl'),'wb'))
 pickle.dump(token_lists[1],open(osp.join(cfg.DATA.TOKEN_VAL_DIR,'val_tokens.pkl'),'wb'))
+"""
 
+data_path = cfg.DATA.DATA_PATH
+json_path = cfg.DATA.TRAIN_JSON_PATH
+l5d = LyftDataset(data_path=data_path,json_path=json_path,verbose=True)
 
+entries = []
+for scene in l5d.scene:
+    token = scene['first_sample_token']
+    name = scene['name']
+    host = "-".join(name.split("-")[:2])
+    entries.append((host,token))
+
+df = pd.DataFrame(entries,columns=['host_name','first_sample_token'])
+
+val_hosts = ["host-a007", "host-a008", "host-a009"] 
+val_df    = df[df['host_name'].isin(val_hosts)]
+val_ind   = val_df.index
+train_df  = df[~df.index.isin(val_ind)]
+
+dfs = [train_df,val_df]
+box_dirs = [cfg.DATA.BOX_TRAIN_DIR,cfg.DATA.BOX_VAL_DIR]
+lidar_dirs = [cfg.DATA.LIDAR_TRAIN_DIR,cfg.DATA.LIDAR_VAL_DIR]
+token_dirs = [cfg.DATA.TOKEN_TRAIN_DIR,cfg.DATA.TOKEN_VAL_DIR]
+
+for df,box_dir,lidar_dir,token_dir in zip(dfs,box_dirs,lidar_dirs,token_dirs):
+    data_dict  = {}
+    token_list = []
+    box_list   = []
+    for token in tqdm(df.first_sample_token):
+        while token:
+            sample = l5d.get('sample',token)
+            lidar_token = sample['data']['LIDAR_TOP']
+            try:
+                lidar_filepath = l5d.get_sample_data_path(lidar_token)
+                lidar_pointcloud = LidarPointCloud.from_file(lidar_filepath)
+            except Exception as e:
+                print('Failed to load LIDAR cloud for {}: {}:'.format(token,e))
+                token = sample['next']
+                continue
+            lidar_data = l5d.get('sample_data',lidar_token)
+            ego_pose   = l5d.get('ego_pose',lidar_data['ego_pose_token'])
+            cal_sensor = l5d.get('calibrated_sensor',lidar_data['calibrated_sensor_token'])
+            boxes      = l5d.get_boxes(lidar_token)
+            move_boxes_to_canvas_space(boxes,ego_pose)
+            box_list.append(boxes)
+            boxes_fp   = osp.join(box_dir,token + '_boxes.pkl')
+            pickle.dump(boxes,open(boxes_fp,'wb'))
+            prev_token = sample['prev']
+            data_dict[token] = {'lidar_fp':str(lidar_filepath),
+                                'ego_pose':ego_pose,
+                                'cal_sensor':cal_sensor,
+                                'boxes':boxes_fp,
+                                'prev_token':prev_token}
+            token_list.append(token)
+            token = sample['next']
+    
+    ddfp = osp.join(lidar_dir,'data_dict.pkl')
+    tkfp = osp.join(token_dir,'token_list.pkl')
+    pickle.dump(data_dict,open(ddfp,'wb'))
+    pickle.dump(token_list,open(tkfp,'wb'))
+    
+anchor_boxes,anchor_corners,anchor_centers,anchor_xy = make_anchor_boxes()
+a_dir = cfg.DATA.ANCHOR_DIR
+pickle.dump(anchor_boxes,open(osp.join(a_dir,'anchor_boxes.pkl'),'wb'))
+pickle.dump(anchor_corners,open(osp.join(a_dir,'anchor_corners.pkl'),'wb'))
+pickle.dump(anchor_centers,open(osp.join(a_dir,'anchor_centers.pkl'),'wb'))
+pickle.dump(anchor_xy,open(osp.join(a_dir,'anchor_xy.pkl'),'wb'))
 
 
