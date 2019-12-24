@@ -7,9 +7,9 @@ cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
 
-#machine = 'local'
+machine = 'local'
 #machine = 'kaggle'
-machine = 'cloud'
+#machine = 'cloud'
 
 if 'kaggle' in os.getcwd():
     machine = 'kaggle'
@@ -20,7 +20,14 @@ if machine == 'local':
     cfg.DATA.CKPT_DIR        = '/home/mmr/PointPillars/ckpts'
     cfg.DATA.DATA_PATH       = '/home/mmr/lyft_dataset'
     cfg.DATA.TRAIN_JSON_PATH = '/home/mmr/lyft_dataset/train_data'
-    cfg.DATA.BOX_DIR         = '/home/mmr/PointPillars/boxes'
+    cfg.DATA.BOX_TRAIN_DIR   = '/home/mmr/PointPillars/boxes/training'
+    cfg.DATA.BOX_VAL_DIR     = '/home/mmr/PointPillars/boxes/validation'
+    cfg.DATA.ANCHOR_DIR      = '/home/mmr/PointPillars/anchors'
+    cfg.DATA.LIDAR_TRAIN_DIR = '/home/mmr/PointPillars/lidars/training'
+    cfg.DATA.LIDAR_VAL_DIR   = '/home/mmr/PointPillars/lidars/validation'
+    cfg.DATA.TOKEN_TRAIN_DIR = '/home/mmr/PointPillars/tokens/training'
+    cfg.DATA.TOKEN_VAL_DIR   = '/home/mmr/PointPillars/tokens/validation'
+    
 
 if machine == 'kaggle':
     cfg.DATA.ROOT_DIR        = '/kaggle/input/3d-object-detection-for-autonomous-vehicles'

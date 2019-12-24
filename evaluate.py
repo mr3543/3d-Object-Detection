@@ -11,6 +11,7 @@ from lyft_dataset_sdk.utils.data_classes import Box
 from lyft_dataset_sdk.eval.detection.mAP_evaluation import get_average_precisions
 from torchvision.ops import nms    
 
+
 def make_box_dict(box,token,score):
     bd = {'sample_token': token,
          'translation' : list(box.center),
@@ -83,28 +84,21 @@ def move_box_to_car_space(box):
     box.wlh    = np.array([car_w,car_l,h])
     box.center = np.array([car_x,car_y,z]) 
 
-def to_xy(box):
-    rot = box.orientation.yaw_pitch_roll[0]
-    bottom_corners = box.bottom_corners().transpose()[:,:2]
-    if rot > 0:
-        return np.concatenate((bottom_corners[1,:],bottom_corners[3,:]))
-    return np.concatenate((bottom_corners[2,:],bottom_corners[0,:]))
-
 def box_nms(pos_inds,anchor_xy,scores,thresh):
-    #nms_boxes = torch.Tensor([to_xy(anchor_box_list[i]) for i in pos_inds])
-    nms_boxes = torch.from_numpy(anchor_xy).float()[pos_inds]
+    
+    nms_boxes = torch.from_numpy(anchor_xy.copy()).float()[pos_inds]
+    nms_boxes[:,1] = (cfg.DATA.CANVAS_HEIGHT - 1) - nms_boxes[:,1]
+    nms_boxes[:,3] = (cfg.DATA.CANVAS_HEIGHT - 1) - nms_boxes[:,3]
     scores    = scores.cpu()
     return nms(nms_boxes,scores,thresh)
 
 def evaluate_single(pp_model,anchor_box_list,data_mean,device,
                     p,inds):
 
-    lidars_fp    = osp.join(cfg.DATA.LIDAR_TRAIN_DIR,'lidar_filepaths.pkl')
     data_dict_fp = osp.join(cfg.DATA.LIDAR_TRAIN_DIR,'data_dict.pkl')
     token_fp     = osp.join(cfg.DATA.TOKEN_TRAIN_DIR,'training_tokens.pkl')
     anch_xy_fp   = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_xy.pkl')
 
-    lidar_filepaths = pickle.load(open(lidars_fp,'rb'))
     data_dict       = pickle.load(open(data_dict_fp,'rb'))
     data_mean       = pickle.load(open('pillar_means.pkl','rb')) 
     token_list      = pickle.load(open(token_fp,'rb'))
@@ -119,8 +113,6 @@ def evaluate_single(pp_model,anchor_box_list,data_mean,device,
     scores,classes = torch.max(cls,dim=-1)
     pos_inds       = torch.where(scores > cfg.DATA.VAL_POS_THRESH)[0]
     
-    print(len(pos_inds))
-    print(torch.max(scores))
     to_keep        = box_nms(pos_inds,anchor_xy,scores[pos_inds],cfg.DATA.VAL_NMS_THRESH)
     final_box_inds = pos_inds[to_keep]
      
@@ -144,7 +136,7 @@ def evaluate_single(pp_model,anchor_box_list,data_mean,device,
     for thresh in cfg.DATA.VAL_THRESH_LIST:
         thresh_ap = get_average_precisions(gt_box_list,pred_box_list,
                                         cfg.DATA.CLASS_NAMES,thresh)
-        map_list.append(thresh)
+        map_list.append(np.mean(thresh_ap))
 
     print('---------VALIDATON SET-----------')
     print('VAL mAP: ',np.mean(map_list))
@@ -154,12 +146,10 @@ def evaluate_single(pp_model,anchor_box_list,data_mean,device,
 
 def evaluate(pp_model,anchor_box_list,data_mean,device):
 
-    lidars_fp    = osp.join(cfg.DATA.LIDAR_VAL_DIR,'lidar_filepaths.pkl')
     data_dict_fp = osp.join(cfg.DATA.LIDAR_VAL_DIR,'data_dict.pkl')
     token_fp     = osp.join(cfg.DATA.TOKEN_VAL_DIR,'val_tokens.pkl')
     anch_xy_fp   = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_xy.pkl')
 
-    lidar_filepaths = pickle.load(open(lidars_fp,'rb'))
     data_dict       = pickle.load(open(data_dict_fp,'rb'))
     data_mean       = pickle.load(open('pillar_means.pkl','rb')) 
     token_list      = pickle.load(open(token_fp,'rb'))
@@ -172,10 +162,9 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
     reg_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.REG_DIMS 
 
     pp_model.eval()
-    pp_dataset = PPDataset(lidar_filepaths,data_dict,None,
-                           None,None,data_mean=data_mean,
-                           training=False)
-
+    pp_dataset = PPDataset(token_list,data_dict,None,None,None,
+                           data_mean=data_mean,training=False)
+                          
     dataloader = torch.utils.data.DataLoader(pp_dataset,batch_size=1,shuffle=False,
                                              num_workers=1)
 
@@ -218,7 +207,7 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
     for thresh in cfg.DATA.VAL_THRESH_LIST:
         thresh_ap = get_average_precisions(gt_box_list,pred_box_list,
                                            cfg.DATA.CLASS_NAMES,thresh)
-        map_list.append(thresh)
+        map_list.append(np.mean(thresh_ap))
 
     print('---------VALIDATON SET-----------')
     print('VAL mAP: ',np.mean(map_list))
