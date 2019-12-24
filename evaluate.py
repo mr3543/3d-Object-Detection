@@ -209,10 +209,7 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
                                            cfg.DATA.CLASS_NAMES,thresh)
         map_list.append(np.mean(thresh_ap))
 
-    print('---------VALIDATON SET-----------')
-    print('VAL mAP: ',np.mean(map_list))
-    print('---------------------------------')
-
+    return np.mean(map_list)
 
 def write_submission(boxes):
     sub = {}
