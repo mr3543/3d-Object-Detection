@@ -7,6 +7,7 @@ import data.pillars as pillars
 import pickle
 import pathlib
 from functools import reduce
+import gc
 import pdb
 from config import cfg
 from utils.box_utils import move_boxes_to_canvas_space,create_target,create_pillars_py,boxes_to_image_space
@@ -105,6 +106,10 @@ class PPDataset(torch.utils.data.Dataset):
         agg_pc = np.zeros((4,0))
         curr_token = token
         for _ in range(self.num_sweeps):
+            
+            if not self.data_dict[curr_token]['lidar_fp']:
+                curr_token = self.data_dict[curr_token]['prev_token']
+                continue 
             lidar_fp = pathlib.Path(self.data_dict[curr_token]['lidar_fp'])
             curr_pc  = LidarPointCloud.from_file(lidar_fp)
             curr_pose = self.data_dict[curr_token]['ego_pose']
@@ -151,6 +156,7 @@ class PPDataset(torch.utils.data.Dataset):
                                     self.anchor_boxes,boxes)
             c_target = torch.from_numpy(c_target).float()
             r_target = torch.from_numpy(r_target).float()
+            gc.collect()
             return (pillar,indices,c_target,r_target)
         
         return (pillar,indices)

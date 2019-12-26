@@ -7,12 +7,28 @@ cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
 
-machine = 'local'
+#machine = 'local'
 #machine = 'kaggle'
 #machine = 'cloud'
+machine = 'vastai'
 
 if 'kaggle' in os.getcwd():
     machine = 'kaggle'
+
+if machine == 'vastai':
+    pp_dir = '/root/PointPillars/'
+    d_dir  = '/root/data/'
+    cfg.DATA.ROOT_DIR        = d_dir
+    cfg.DATA.CKPT_DIR        = pp_dir + 'ckpts'
+    cfg.DATA.DATA_PATH       = d_dir
+    cfg.DATA.TRAIN_JSON_PATH = d_dir  + 'train_data'
+    cfg.DATA.BOX_TRAIN_DIR   = pp_dir + 'boxes/training'
+    cfg.DATA.BOX_VAL_DIR     = pp_dir + 'boxes/validation'
+    cfg.DATA.ANCHOR_DIR      = pp_dir + 'anchors'
+    cfg.DATA.LIDAR_TRAIN_DIR = pp_dir + 'lidars/training'
+    cfg.DATA.LIDAR_VAL_DIR   = pp_dir + 'lidars/validation'
+    cfg.DATA.TOKEN_TRAIN_DIR = pp_dir + 'tokens/training'
+    cfg.DATA.TOKEN_VAL_DIR   = pp_dir + 'tokens/validation'
 
 # data location paramers
 if machine == 'local':
@@ -117,11 +133,11 @@ cfg.DATA.IND_TO_NAME       = {'0':'animal','1':'bicycle','2':'bus','3':'car','4'
 # model parameters
 cfg.NET.FEATURE_NET_IN  = 9
 cfg.NET.FEATURE_NET_OUT = 64
-cfg.NET.BATCH_SIZE      = 3
+cfg.NET.BATCH_SIZE      = 2
 cfg.NET.EPOCHS          = 10
 cfg.NET.LEARNING_RATE   = 1e-4
 cfg.NET.WEIGHT_DECAY    = 1e-4
-cfg.NET.NUM_WORKERS     = 0
+cfg.NET.NUM_WORKERS     = 2
 
 # loss parameters
 cfg.NET.B_ORT = .2
@@ -133,6 +149,6 @@ cfg.NET.GAMMA = 2
 
 cfg.NET.VAL_MODEL = ''
 cfg.DATA.VAL_POS_THRESH = .5
-cfg.DATA.VAL_NMS_THRESH = .3
+cfg.DATA.VAL_NMS_THRESH = .1
 cfg.DATA.VAL_THRESH_LIST = np.arange(.5,1.0,0.05)
 

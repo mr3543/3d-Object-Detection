@@ -46,12 +46,14 @@ def make_pred_boxes(inds,anchor_box_list,reg,classes,scores,token):
         box_name = cfg.DATA.IND_TO_NAME[str(int(classes[i]))]
         box_yaw = np.arcsin(offsets[6]) + a_box.orientation.yaw_pitch_roll[0]
         #print('offsets: {}, yaw: {}, i: {}'.format(offsets[6],box_yaw,j))
+        """
         if offsets[7] > offsets[8]:
             box_ort = 1
         else:
             box_ort = -1
         
         box_yaw *= box_ort
+        """
         quat = Quaternion(axis=[0,0,1],radians = box_yaw) 
         box = Box(center=[box_x,box_y,box_z],
                   size = [box_w,box_l,box_h],
@@ -147,7 +149,7 @@ def evaluate_single(pp_model,anchor_box_list,data_mean,device,
 def evaluate(pp_model,anchor_box_list,data_mean,device):
 
     data_dict_fp = osp.join(cfg.DATA.LIDAR_VAL_DIR,'data_dict.pkl')
-    token_fp     = osp.join(cfg.DATA.TOKEN_VAL_DIR,'val_tokens.pkl')
+    token_fp     = osp.join(cfg.DATA.TOKEN_VAL_DIR,'token_list.pkl')
     anch_xy_fp   = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_xy.pkl')
 
     data_dict       = pickle.load(open(data_dict_fp,'rb'))
@@ -178,21 +180,20 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
         cls,reg = pp_model(p,inds)
         
         cls            = cls.permute(0,2,3,1).reshape(-1,cfg.DATA.NUM_CLASSES)
+        reg            = reg.permute(0,2,3,1).reshape(-1,cfg.DATA.REG_DIMS)
         cls            = torch.sigmoid(cls)
         reg[...,6]     = torch.tanh(reg[...,6])
         scores,classes = torch.max(cls,dim=-1)
         pos_inds       = torch.where(scores > cfg.DATA.VAL_POS_THRESH)[0]
-        
-        print(len(pos_inds))
-        print(torch.max(scores))
+    
         to_keep        = box_nms(pos_inds,anchor_xy,scores[pos_inds],cfg.DATA.VAL_NMS_THRESH)
         final_box_inds = pos_inds[to_keep]
          
         final_boxes    = make_pred_boxes(final_box_inds,anchor_box_list,reg,classes,scores,
                                          token_list[i])
-        gt_boxes_fp    = data_dict[lidar_filepaths[i]]['boxes']
+        gt_boxes_fp    = data_dict[token_list[i]]['boxes']
         gt_boxes       = pickle.load(open(gt_boxes_fp,'rb'))
-        
+
         for box in gt_boxes:
             move_box_to_car_space(box)
             box_dict = make_box_dict(box,token_list[i],score=False)

@@ -283,12 +283,14 @@ void create_pillars(py::array_t<double> &points,
                 delete p;
             }
             delete it->second;
+            delete means_map.at(it->first);
             ++it;
             while (it !=pillar_map.end()){
                 for (auto p: (it->second)->get_points()){
                     delete p;
                 }
             delete it->second;
+            delete means_map.at(it->first);
             ++it;
             }
             

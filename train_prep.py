@@ -134,6 +134,12 @@ for df,box_dir,lidar_dir,token_dir in zip(dfs,box_dirs,lidar_dirs,token_dirs):
                 lidar_pointcloud = LidarPointCloud.from_file(lidar_filepath)
             except Exception as e:
                 print('Failed to load LIDAR cloud for {}: {}:'.format(token,e))
+                prev_token = sample['prev']
+                data_dict[token] = {'lidar_fp':None,
+                                    'ego_pose':None,
+                                    'cal_sensor':None,
+                                    'boxes':None,
+                                    'prev_token':prev_token}
                 token = sample['next']
                 continue
             lidar_data = l5d.get('sample_data',lidar_token)
