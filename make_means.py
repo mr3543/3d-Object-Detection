@@ -5,6 +5,10 @@ from config import cfg
 from data.dataset import PPDataset
 from tqdm import tqdm
 
+"""
+this script computes the training dataset mean of the model input tensor
+"""
+
 ddfp = osp.join(cfg.DATA.LIDAR_TRAIN_DIR,'data_dict.pkl')
 tkfp = osp.join(cfg.DATA.TOKEN_TRAIN_DIR,'token_list.pkl')
 

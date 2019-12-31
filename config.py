@@ -2,18 +2,17 @@ import os.path as osp
 from easydict import EasyDict as edict
 import numpy as np
 import os
+import torch
 
 cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
 
-#machine = 'local'
-#machine = 'kaggle'
+machine = 'local'
 #machine = 'cloud'
-machine = 'vastai'
+#machine = 'vastai'
 
-if 'kaggle' in os.getcwd():
-    machine = 'kaggle'
+# set the directories according to the machine type
 
 if machine == 'vastai':
     pp_dir = '/root/PointPillars/'
@@ -43,14 +42,7 @@ if machine == 'local':
     cfg.DATA.LIDAR_VAL_DIR   = '/home/mmr/PointPillars/lidars/validation'
     cfg.DATA.TOKEN_TRAIN_DIR = '/home/mmr/PointPillars/tokens/training'
     cfg.DATA.TOKEN_VAL_DIR   = '/home/mmr/PointPillars/tokens/validation'
-    
 
-if machine == 'kaggle':
-    cfg.DATA.ROOT_DIR        = '/kaggle/input/3d-object-detection-for-autonomous-vehicles'
-    cfg.DATA.CKPT_DIR        = '/kaggle/working/PointPillars/ckpts'
-    cfg.DATA.DATA_PATH       = '/kaggle/working/PointPillars' 
-    cfg.DATA.TRAIN_JSON_PATH = '/kaggle/input/3d-object-detection-for-autonomous-vehicles/train_data'
-    cfg.DATA.BOX_DIR         = '/kaggle/working/PointPillars/boxes/'
 
 if machine == 'cloud':
     cfg.DATA.ROOT_DIR        = '/home/michaelregan/data/'
@@ -77,11 +69,13 @@ cfg.DATA.Y_STEP    = .2
 cfg.DATA.STEP      = .2
 cfg.DATA.FM_SCALE  = .5
 
+# compute the height and width of the canvas and feature map
 cfg.DATA.FM_HEIGHT     = np.int32(((cfg.DATA.Y_MAX - cfg.DATA.Y_MIN)/cfg.DATA.Y_STEP)*cfg.DATA.FM_SCALE)
 cfg.DATA.FM_WIDTH      = np.int32(((cfg.DATA.X_MAX - cfg.DATA.X_MIN)/cfg.DATA.X_STEP)*cfg.DATA.FM_SCALE)
 cfg.DATA.CANVAS_HEIGHT = np.int32((cfg.DATA.Y_MAX - cfg.DATA.Y_MIN)/cfg.DATA.Y_STEP)
 cfg.DATA.CANVAS_WIDTH  = np.int32((cfg.DATA.X_MAX - cfg.DATA.X_MIN)/cfg.DATA.X_STEP)
 
+# approximate average box sizes of each category 
 animal            = np.array([.5,1,.5])/cfg.DATA.STEP
 bicycle           = np.array([.75,2,1.5])/cfg.DATA.STEP
 bus               = np.array([3,12.5,3.5])/cfg.DATA.STEP
@@ -92,16 +86,20 @@ other_vehicle     = np.array([2.75,8.5,3.5])/cfg.DATA.STEP
 pedestrian        = np.array([.75,.75,1.75])/cfg.DATA.STEP
 truck             = np.array([3,10,3.5])/cfg.DATA.STEP
 
+# group the classes into categories according to size
 small = np.stack((animal,bicycle,pedestrian,motorcycle))
 small = np.mean(small,axis=0)
 med   = car
 large = np.stack((bus,emergency_vehicle,truck,other_vehicle))
 large = np.mean(large,axis=0)
 
-
+# classes and class names
 cfg.DATA.NUM_CLASSES = 9
 cfg.DATA.CLASS_NAMES = ['animal','bicycle','bus','car','emergency_vehicle',
                         'motorcycle','other_vehicle','pedestrian','truck']
+
+# uncomment according to whether you want to use 2 anchor boxes per category
+# or group the classes into sizes
 """
 cfg.DATA.ANCHOR_DIMS = [animal,animal,bicycle,bicycle,bus,bus,\
                car,car,emergency_vehicle,emergency_vehicle, \
@@ -117,6 +115,7 @@ cfg.DATA.ANCHOR_YAWS = [0,90]*3
 cfg.DATA.ANCHOR_ZS   = [.5]*2 + [.75]*2 + [1.0]*2
 cfg.DATA.NUM_ANCHORS = len(cfg.DATA.ANCHOR_DIMS)
 
+# pillar tensor & iou settings
 cfg.DATA.MAX_POINTS_PER_PILLAR = 100
 cfg.DATA.MAX_PILLARS    = 12000
 cfg.DATA.REG_DIMS       = 9
@@ -142,11 +141,12 @@ cfg.NET.NUM_WORKERS     = 2
 # loss parameters
 cfg.NET.B_ORT = .2
 cfg.NET.B_REG = 1
-cfg.NET.B_CLS = 100
+cfg.NET.B_CLS = 25
 cfg.NET.GAMMA = 2
+cfg.NET.POS_LABEL_WEIGHT = 25
+cfg.NET.CLASS_WEIGHTS = torch.Tensor([2177,28,79,1,4059,616,20,20,54])*cfg.NET.POS_LABEL_WEIGHT
 
 # validation
-
 cfg.NET.VAL_MODEL = ''
 cfg.DATA.VAL_POS_THRESH = .5
 cfg.DATA.VAL_NMS_THRESH = .1

@@ -18,6 +18,11 @@ typedef bg::model::polygon<bg::model::d2::point_xy<double>,false,false> Polygon_
 PillarPoint::PillarPoint(double x,double y,double z,double r,
                          double canvas_x,double canvas_y)
 {
+    /*
+        PillarPoint constructor. Sets the coordinates of the pillar point
+        and the xp,yp variables which are the xy distance from the point to
+        the pillar location. 
+    */
     this->x = x;
     this->y = y;
     this->z = z;
@@ -34,6 +39,12 @@ void PillarPoint::make_feature(py::array_t<double> &tensor,
                                int pillar_ind,
                                int point_ind) const 
 {
+    /*
+        makes a single feature for the pillar point. The pybind11
+        tensor to be filled in is passed in as input. Each element 
+        of the feature is stored as a class attribute. 
+    */
+
     tensor.mutable_at(pillar_ind,point_ind,0) = this->x;
     tensor.mutable_at(pillar_ind,point_ind,1) = this->y;
     tensor.mutable_at(pillar_ind,point_ind,2) = this->z;
@@ -70,11 +81,20 @@ double PillarPoint::get_z() const{
 }
 
 Pillar::Pillar(double canvas_x,double canvas_y){
+    /*
+        Pillar constructor - sets the xy location
+        of the pillar. 
+    */
+
     this->canvas_x = canvas_x;
     this->canvas_y = canvas_y;
 }
 
 void Pillar::add_point(PillarPoint *pp){
+    /*
+        add a PillarPoint to the Pillar
+    */
+
     this->points.push_back(pp);
 }
 
@@ -83,6 +103,12 @@ std::vector<PillarPoint*> &Pillar::get_points(){
 }
 
 std::vector<double> Pillar::point_mean() const{
+
+    /*
+        computes the mean of the x,y,z coordinates 
+        of all the points in the pillar. 
+    */
+
     double x_total = 0;
     double y_total = 0;
     double z_total = 0;
@@ -109,6 +135,17 @@ double iou(py::array_t<double> &anchor_corners,
            int gt_index)
 {
     
+    /*
+        computes the ious of a ground truth box and an anchor box.
+        Polygon_cc is a polygon type where the corners are passed in
+        counter clockwise order. Polygon is a polygon type where the
+        points are passed in clockwise order.
+
+        program exits if an iou < 0. this likely means that the ordering
+        of the box corners is incorrect. 
+
+    */
+
     Polygon_cc anchor{{{anchor_corners.at(anchor_index,0,0),anchor_corners.at(anchor_index,0,1)},
                    {anchor_corners.at(anchor_index,1,0),anchor_corners.at(anchor_index,1,1)},
                    {anchor_corners.at(anchor_index,2,0),anchor_corners.at(anchor_index,2,1)},
@@ -128,14 +165,6 @@ double iou(py::array_t<double> &anchor_corners,
     double iou = int_area/(bg::area(anchor) + bg::area(gt_box) - int_area);
     if (iou < 0){
         std::cout << "IOU < 0 " << gt_index << std::endl;
-        /*
-        std::cout << "gt box area: " << bg::area(gt_box) << std::endl;
-        std::cout << "iou: " << iou << std::endl;
-        std::cout << "C1: " << gt_corners.at(gt_index,0,0) << " " << gt_corners.at(gt_index,0,1) << std::endl;
-        std::cout << "C2: " << gt_corners.at(gt_index,1,0) << " " << gt_corners.at(gt_index,1,1) << std::endl;
-        std::cout << "C3: " << gt_corners.at(gt_index,2,0) << " " << gt_corners.at(gt_index,2,1) << std::endl;
-        std::cout << "C4: " << gt_corners.at(gt_index,3,0) << " " << gt_corners.at(gt_index,3,1) << std::endl;
-        */
         std::exit(1); 
     }
     return iou;    
@@ -219,20 +248,37 @@ void create_pillars(py::array_t<double> &points,
                     double z_max,
                     double canvas_height)
 {
-    
+    /*
+        fills the pybind11 array `tensor` with the features
+        from the lidar points in `points`. `indices` is filled
+        with the xy location of the features in order to scatter
+        back the tensor into a pseudo-image after the feature net.
+    */
+
+    /*
+        create two hash maps, one will map from the xy pillar
+        coordinates to the Pillar object, the other from the 
+        xy pillar coordinates to the mean of the points in the 
+        pillar
+    */
     boost::unordered_map<boost::array<double,2>,Pillar*> pillar_map;
     boost::unordered_map<boost::array<double,2>,double*> means_map;
 
+    // loop through each lidar point
     for (int i=0; i < points.shape()[0];i++)
     {
+        // ignore if point is outside preset area
         if ((points.at(i,0) >= x_max) || (points.at(i,0) < x_min) || \
             (points.at(i,1) >= y_max) || (points.at(i,1) < y_min) || \
             (points.at(i,2) >= z_max) || (points.at(i,2) < z_min)){
             continue;
         }
+
+        // compute which pillar the point belongs to 
         double canvas_x = floor((points.at(i,0) - x_min)/x_step);
         double canvas_y = floor((points.at(i,1) - y_min)/y_step);
         canvas_y = (canvas_height - 1) - canvas_y;
+        // make new pillar point 
         PillarPoint *pp = new PillarPoint(points.at(i,0),points.at(i,1),
                                           points.at(i,2),points.at(i,3),
                                           canvas_x,canvas_y);
@@ -240,19 +286,28 @@ void create_pillars(py::array_t<double> &points,
         boost::array<double,2> canvas;
         canvas[0] = canvas_x;
         canvas[1] = canvas_y;
-    
+
+        // if no Pillar object exits at canvas_x,canvas_y make a new
+        // one, add the point to it and add it to the hash map
         if (pillar_map.find(canvas) == pillar_map.end())
         {
             Pillar *pillar = new Pillar(canvas_x,canvas_y);
             pillar->add_point(pp);
             pillar_map.insert({canvas,pillar});
         }
+        // otherwise insert the point to the pillar
         else
         {
             Pillar *pillar = pillar_map.at(canvas);
             pillar->add_point(pp);
         }
 
+        /*
+            this computes the running mean of the points
+            in the pillar - this is redundant, this 
+            code should be moved inside the pillars
+            class. 
+        */
         if (means_map.find(canvas) == means_map.end())
         {
             double *means = new double[4];
@@ -275,8 +330,12 @@ void create_pillars(py::array_t<double> &points,
 
     int num_pillars = 0;
     boost::unordered::unordered_map<boost::array<double,2>,Pillar*>::iterator it;
+
+    // loop through each pillar
     for (it = pillar_map.begin();it!=pillar_map.end(); ++it)
     {
+        // if we hit the max number of pillars free the remaining memory
+        // in the means, pillars and pillar points.
         if (num_pillars >= max_pillars){
             
             for (auto p: (it->second)->get_points()){
@@ -303,8 +362,12 @@ void create_pillars(py::array_t<double> &points,
         double *pillar_mean = means_map.at(canvas);
         int num_points = 0;
         std::vector<PillarPoint*> pillar_points = pillar->get_points();
+
+        // loop through each of the points in the pillar 
         for (int i =0; i < pillar_points.size(); i++)
         {
+            // if we hit the max number of points in a pillar
+            // free the memory from the remaining points
             if (num_points >= max_points_per_pillar){
                 while (i < pillar_points.size()){
                     delete pillar_points[i];
@@ -312,6 +375,8 @@ void create_pillars(py::array_t<double> &points,
                 }
                 break;
             }
+
+            // make the feature from the point in the pillar
             PillarPoint *p = pillar_points[i];
             p->set_xc(pillar_mean[0] - p->get_x());
             p->set_yc(pillar_mean[1] - p->get_y());
@@ -320,6 +385,8 @@ void create_pillars(py::array_t<double> &points,
             num_points++;
             delete p;
         }
+        // set the indices which map the pillar number 
+        // to its xy canvas location
         indices.mutable_at(num_pillars,0) = 1;
         indices.mutable_at(num_pillars,1) = canvas[0];
         indices.mutable_at(num_pillars,2) = canvas[1];
@@ -337,6 +404,15 @@ void make_ious(py::array_t<double> &a_corners,
                py::array_t<double> &ious)
             
 {    
+    /*
+        make ious for all anchors and gt boxes passed in 
+        through `a_corners` & `g_corners`
+
+        since doing the iou computation is expensive we can 
+        cut down a lot of time by ignoring boxes whose centers
+        are far apart.
+    */
+
     for (int i=0; i < a_corners.shape()[0];i++){
         for(int j=0; j < g_corners.shape()[0];j++){
             if ((std::abs(a_centers.at(i,0) - g_centers.at(j,0)) > 10) || \

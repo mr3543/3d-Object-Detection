@@ -18,11 +18,16 @@ from pyquaternion import Quaternion
 from utils.box_utils import boxes_to_image_space
 from lyft_dataset_sdk.utils.data_classes import LidarPointCloud,Box
 
-def get_batch(dataset,batch_size):
+def get_batch(dataset,batch_size,ind):
+    """
+        helper method for creating a 
+        batch w/o datalodaer - used
+        for debugging
+    """
     pil_list = []
     ind_list = []
     tar_list = []
-    for i in range(batch_size):
+    for i in range(ind,ind + batch_size):
         pil,ind,tar = dataset[i]
         pil_list.append(pil)
         ind_list.append(ind)
@@ -31,11 +36,6 @@ def get_batch(dataset,batch_size):
     ind_out = torch.stack(ind_list)
     tar_out = torch.stack(tar_list)
     return (pil_out,ind_out,tar_out)
-
-fn_in = cfg.NET.FEATURE_NET_IN
-fn_out = cfg.NET.FEATURE_NET_OUT
-cls_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.NUM_CLASSES
-reg_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.REG_DIMS
 
 # make filepaths
 ddfp = osp.join(cfg.DATA.LIDAR_TRAIN_DIR,'data_dict.pkl')
@@ -65,8 +65,12 @@ num_workers = cfg.NET.NUM_WORKERS
 dataloader  = torch.utils.data.DataLoader(pp_dataset,batch_size,
                                          shuffle=False,num_workers=num_workers)
 
+# get model configs
+fn_in = cfg.NET.FEATURE_NET_IN
+fn_out = cfg.NET.FEATURE_NET_OUT
 cls_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.NUM_CLASSES
 reg_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.REG_DIMS
+
 pp_model = PPModel(fn_in,fn_out,cls_channels,reg_channels,device)
 pp_loss  = PPLoss(cfg.NET.B_ORT,cfg.NET.B_REG,cfg.NET.B_CLS,cfg.NET.GAMMA,device)
 
@@ -75,7 +79,6 @@ pp_loss  = pp_loss.to(device)
 
 
 #LSUV INIT
-
 (p,i,_,__) = next(iter(dataloader))
 p = p.to(device)
 i = i.to(device)
@@ -87,6 +90,7 @@ pp_model.backbone = LSUVinit(pp_model.backbone,scatter_out,needed_std = 1.0, std
 backbone_out = pp_model.backbone(scatter_out)
 pp_model.det_head = LSUVinit(pp_model.det_head,backbone_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
 
+# set last layer bias for focal loss init
 pi = 0.01
 pp_model.det_head.cls.bias.data.fill_(-np.log((1-pi)/pi))
 
