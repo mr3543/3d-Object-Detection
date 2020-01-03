@@ -8,9 +8,9 @@ cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
 
-machine = 'local'
+#machine = 'local'
 #machine = 'cloud'
-#machine = 'vastai'
+machine = 'vastai'
 
 # set the directories according to the machine type
 
@@ -136,7 +136,7 @@ cfg.NET.BATCH_SIZE      = 2
 cfg.NET.EPOCHS          = 10
 cfg.NET.LEARNING_RATE   = 1e-4
 cfg.NET.WEIGHT_DECAY    = 1e-4
-cfg.NET.NUM_WORKERS     = 2
+cfg.NET.NUM_WORKERS     = 3
 
 # loss parameters
 cfg.NET.B_ORT = .2
@@ -144,7 +144,7 @@ cfg.NET.B_REG = 1
 cfg.NET.B_CLS = 25
 cfg.NET.GAMMA = 2
 cfg.NET.POS_LABEL_WEIGHT = 25
-cfg.NET.CLASS_WEIGHTS = torch.Tensor([2177,28,79,1,4059,616,20,20,54])*cfg.NET.POS_LABEL_WEIGHT
+cfg.NET.CLASS_WEIGHTS = np.array([2177,28,79,1,4059,616,20,20,54])
 
 # validation
 cfg.NET.VAL_MODEL = ''

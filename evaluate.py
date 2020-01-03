@@ -140,7 +140,7 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
     """
     evaluates the model on the validation set
     """
-
+    gc.collect()
     # load the data and tokens for the validation set
     data_dict_fp = osp.join(cfg.DATA.LIDAR_VAL_DIR,'data_dict.pkl')
     token_fp     = osp.join(cfg.DATA.TOKEN_VAL_DIR,'token_list.pkl')
@@ -158,7 +158,7 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
                            data_mean=data_mean,training=False)
                           
     dataloader = torch.utils.data.DataLoader(pp_dataset,batch_size=1,shuffle=False,
-                                             num_workers=2)
+                                             num_workers=1)
 
     gt_box_list   = []
     pred_box_list = []
@@ -182,7 +182,7 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
     
         # do nms on the positive boxes
         to_keep        = box_nms(pos_inds,anchor_xy,scores[pos_inds],cfg.DATA.VAL_NMS_THRESH)
-        final_box_inds = pos_inds[to_keep]
+        final_box_inds = pos_inds[to_keep[:100]]
          
         # adjust the boxes selected from nms
         final_boxes    = make_pred_boxes(final_box_inds,anchor_box_list,reg,classes,scores,

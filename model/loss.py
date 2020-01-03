@@ -18,7 +18,7 @@ class PPLoss(nn.Module):
         # classification and regression losses are approximately on the same scale
 
         self.b_ort,self.b_reg,self.b_cls,self.gamma,self.device = b_ort,b_reg,b_cls,gamma,device
-
+        self.cls_weights = torch.from_numpy(cfg.NET.CLASS_WEIGHTS).to(self.device)
 
     def forward(self,cls_tensor,reg_tensor,cls_targets,reg_targets):
         #cls_tensor: [batch,cls_channels,FM_H,FM_W]
@@ -35,7 +35,7 @@ class PPLoss(nn.Module):
         p           = torch.sigmoid(cls_tensor)
         ct          = cls_targets.reshape(cls_size[0],cls_size[1],
                                           cls_size[2],cfg.DATA.NUM_ANCHORS,
-                                          cfg.DATA.NUM_CLASSES)*cfg.NET.CLASS_WEIGHTS
+                                          cfg.DATA.NUM_CLASSES)*self.cls_weights
         ct          = ct.reshape(cls_size[0],-1)
         pt          = torch.where(cls_targets == 1,p,1-p)
         #at          = torch.where(cls_targets == 1,torch.ones(pt.size(),device=self.device)*25,torch.ones(pt.size(),device=self.device))

@@ -77,31 +77,41 @@ pp_loss  = PPLoss(cfg.NET.B_ORT,cfg.NET.B_REG,cfg.NET.B_CLS,cfg.NET.GAMMA,device
 pp_model = pp_model.to(device)
 pp_loss  = pp_loss.to(device)
 
-
-#LSUV INIT
-(p,i,_,__) = next(iter(dataloader))
-p = p.to(device)
-i = i.to(device)
-
-pp_model.feature_net = LSUVinit(pp_model.feature_net,p,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
-feature_out = pp_model.feature_net(p)
-scatter_out = pp_model.scatter(feature_out,i)
-pp_model.backbone = LSUVinit(pp_model.backbone,scatter_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
-backbone_out = pp_model.backbone(scatter_out)
-pp_model.det_head = LSUVinit(pp_model.det_head,backbone_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
-
-# set last layer bias for focal loss init
-pi = 0.01
-pp_model.det_head.cls.bias.data.fill_(-np.log((1-pi)/pi))
-
 lr = cfg.NET.LEARNING_RATE
 wd = cfg.NET.WEIGHT_DECAY
-
-
 params = list(pp_model.parameters())
 optim  = torch.optim.Adam(params,lr=lr,weight_decay=wd)
 
+load_model = True
+model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint_1_8000.pth')
+optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint_1_8000.pth')
 
+if load_model:
+    err_code = pp_model.load_state_dict(torch.load(model_fp))
+    print(err_code)
+    err_code = optim.load_state_dict(torch.load(optim_fp))
+    print(err_code)
+    pp_model.train()
+    gc.collect()
+
+else:
+    #LSUV INIT
+    (p,i,_,__) = next(iter(dataloader))
+    p = p.to(device)
+    i = i.to(device)
+
+    pp_model.feature_net = LSUVinit(pp_model.feature_net,p,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
+    feature_out = pp_model.feature_net(p)
+    scatter_out = pp_model.scatter(feature_out,i)
+    pp_model.backbone = LSUVinit(pp_model.backbone,scatter_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
+    backbone_out = pp_model.backbone(scatter_out)
+    pp_model.det_head = LSUVinit(pp_model.det_head,backbone_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
+
+# set last layer bias for focal loss init
+    pi = 0.01
+    pp_model.det_head.cls.bias.data.fill_(-np.log((1-pi)/pi))
+
+    
 print('STARTING TRAINING')
 
 for epoch in range(epochs):
@@ -114,28 +124,33 @@ for epoch in range(epochs):
         c_target = c_target.to(device)
         r_target = r_target.to(device)
         cls_tensor,reg_tensor = pp_model(pillar,inds)
-        c_loss,r_loss,batch_loss = pp_loss(cls_tensor,reg_tensor,c_target,r_target) 
+        c_loss,r_loss,o_loss,batch_loss = pp_loss(cls_tensor,reg_tensor,c_target,r_target) 
         optim.zero_grad()
         batch_loss.backward()
         optim.step()
         gc.collect()
-        if i % 25 == 0:
-            print('total :',batch_loss)        
+        if i % 250 == 0:
+            print('tot: ',batch_loss)        
             print('cls: ',c_loss)
             print('reg: ',r_loss)
+            print('ort: ',o_loss)
 
-        if i % 2000 == 0 and i != 0:
+        if i % 2000 == 0 and i!= 0:
+            print('saving model checkpoint')
             with torch.no_grad():
-                print('STARTING EVALUATION')
-                mAP = evaluate(pp_model,anchor_boxes,data_mean,device)
-                print('val mAP: ',mAP)
-                print('saving model ckpt')
                 cpdir = cfg.DATA.CKPT_DIR
                 cpfp  = osp.join(cpdir,'pp_checkpoint_{}_{}.pth'.format(epoch,i))
                 torch.save(pp_model.state_dict(),cpfp)
                 opfp  = osp.join(cpdir,'optim_checkpoint_{}_{}.pth'.format(epoch,i))
                 torch.save(optim.state_dict(),opfp)
-            gc.collect()    
+        """
+        if i % 4000 == 0 and i != 0:
+            with torch.no_grad():
+                print('STARTING EVALUATION')
+                mAP = evaluate(pp_model,anchor_boxes,data_mean,device)
+                print('val mAP: ',mAP)
+                gc.collect()    
+        """
     epoch_losses.append(batch_loss.detach().cpu().numpy())
 
 print('epoch losses: ',epoch_losses)
