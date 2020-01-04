@@ -83,8 +83,8 @@ params = list(pp_model.parameters())
 optim  = torch.optim.Adam(params,lr=lr,weight_decay=wd)
 
 load_model = True
-model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint_1_8000.pth')
-optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint_1_8000.pth')
+model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint_0_2000.pth')
+optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint_0_2000.pth')
 
 if load_model:
     err_code = pp_model.load_state_dict(torch.load(model_fp))
@@ -111,7 +111,11 @@ else:
     pi = 0.01
     pp_model.det_head.cls.bias.data.fill_(-np.log((1-pi)/pi))
 
-    
+
+b_cls = cfg.NET.B_CLS
+b_reg = cfg.NET.B_REG
+b_ort = cfg.NET.B_ORT
+
 print('STARTING TRAINING')
 
 for epoch in range(epochs):
@@ -129,11 +133,17 @@ for epoch in range(epochs):
         batch_loss.backward()
         optim.step()
         gc.collect()
-        if i % 250 == 0:
-            print('tot: ',batch_loss)        
-            print('cls: ',c_loss)
-            print('reg: ',r_loss)
-            print('ort: ',o_loss)
+        if i % 10 == 0:
+            print('tot: ',batch_loss)
+            print('-------------------------------------------------')
+            print('cls raw: ',c_loss)
+            print('reg raw: ',r_loss)
+            print('ort raw: ',o_loss)
+            print('-------------------------------------------------')
+            print('cls wgt: ',b_cls*c_loss)
+            print('reg wgt: ',b_reg*r_loss)
+            print('ort wgt: ',b_ort*o_loss)
+            print('-------------------------------------------------')
 
         if i % 2000 == 0 and i!= 0:
             print('saving model checkpoint')

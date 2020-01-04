@@ -54,10 +54,7 @@ class PPLoss(nn.Module):
         reg_scores  = reg_tensor[pos_anchors][...,:7]
         loss_targs  = reg_targets[pos_anchors][...,1:8]
         reg_loss    = F.smooth_l1_loss(reg_scores,loss_targs,reduction='mean')
-        
-        
-        # we are excluding the orientation loss since the only 
-        # use is object detection
+         
         ort_scores  = reg_tensor[pos_anchors][...,7:]
         ort_targets = reg_targets[pos_anchors][...,8].long()
         ort_loss    = F.cross_entropy(ort_scores,ort_targets)
