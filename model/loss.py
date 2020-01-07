@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from config import cfg
+from sklearn.metrics import classification_report
 import pdb
 
 
@@ -26,22 +27,28 @@ class PPLoss(nn.Module):
         #cls_channels = anchor_dims * (num_classes+1)
         #reg_channels = anchor_dims * reg_dims
        
-        
+       
+        # convert to [B,H,W,anch*num_classes]
         cls_tensor  = cls_tensor.permute(0,2,3,1)
         cls_size    = cls_tensor.size()
+
+        # convert to [B,H*W*anch*num_classes]
         cls_tensor  = cls_tensor.reshape(cls_size[0],-1)
         cls_targets = cls_targets.reshape(cls_size[0],-1)
         # compute the p vector for focal loss
         p           = torch.sigmoid(cls_tensor)
+        """
         ct          = cls_targets.reshape(cls_size[0],cls_size[1],
                                           cls_size[2],cfg.DATA.NUM_ANCHORS,
                                           cfg.DATA.NUM_CLASSES)*self.cls_weights
         ct          = ct.reshape(cls_size[0],-1)
+        """
         pt          = torch.where(cls_targets == 1,p,1-p)
-        #at          = torch.where(cls_targets == 1,torch.ones(pt.size(),device=self.device)*25,torch.ones(pt.size(),device=self.device))
-        at          = torch.where(cls_targets == 1,ct,torch.ones(pt.size(),device=self.device))
+        at          = torch.where(cls_targets == 1,torch.Tensor([25]).to(self.device),torch.Tensor([1]).to(self.device))
+        #at          = torch.where(cls_targets == 1,ct,torch.ones(pt.size(),device=self.device))
         # compute focal loss weights
         w           = (at*(1-pt)**self.gamma).detach()
+        #w           = ((1-pt)**self.gamma).detach()
         cls_loss    = F.binary_cross_entropy_with_logits(cls_tensor,cls_targets,weight=w)
 
         reg_tensor  = reg_tensor.permute(0,2,3,1)
@@ -60,7 +67,7 @@ class PPLoss(nn.Module):
         ort_loss    = F.cross_entropy(ort_scores,ort_targets)
         
         total_loss = self.b_cls*cls_loss + self.b_reg*reg_loss + self.b_ort*ort_loss
-        return cls_loss,reg_loss,ort_loss,total_loss
+        return p,cls_loss,reg_loss,ort_loss,total_loss
 
 
 

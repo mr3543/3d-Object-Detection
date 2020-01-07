@@ -135,6 +135,63 @@ def box_nms(pos_inds,anchor_xy,scores,thresh):
     scores    = scores.cpu()
     return nms(nms_boxes,scores,thresh)
 
+def evaluate_single(cls_tensor,reg_tensor,token,anchor_box_list,data_dict):
+
+    anch_xy_fp   = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_xy.pkl')
+    anchor_xy    = pickle.load(open(anch_xy_fp,'rb'))
+
+    cls            = cls_tensor.permute(0,2,3,1).reshape(-1,cfg.DATA.NUM_CLASSES)
+    reg            = reg_tensor.permute(0,2,3,1).reshape(-1,cfg.DATA.REG_DIMS)
+    cls            = torch.sigmoid(cls)
+    reg[...,6]     = torch.tanh(reg[...,6])
+    scores,classes = torch.max(cls,dim=-1)
+    # positive boxes are the boxes with classification scores above threshold
+    pos_inds       = torch.where(scores > cfg.DATA.VAL_POS_THRESH)[0]
+
+    # do nms on the positive boxes
+    to_keep        = box_nms(pos_inds,anchor_xy,scores[pos_inds],cfg.DATA.VAL_NMS_THRESH)
+    final_box_inds = pos_inds[to_keep[:100]]
+     
+    # adjust the boxes selected from nms
+    final_boxes    = make_pred_boxes(final_box_inds,anchor_box_list,reg,classes,scores,
+                                     token)
+
+    # load the ground truth boxes from the validation sample
+    gt_boxes_fp    = data_dict[token]['boxes']
+    gt_boxes       = pickle.load(open(gt_boxes_fp,'rb'))
+
+    # loop through ground truth boxes and add create gt_box_list to pass
+    # to lyft_dataset_sdk evaluation function
+    gt_box_list = []
+    pred_box_list = []
+    class_names = []
+    for box in gt_boxes:
+        car_box = move_box_to_car_space(box,image=False)
+        box_dict = make_box_dict(car_box,token,score=False)
+        gt_box_list.append(box_dict)
+        class_names.append(box.name)
+
+    # loop through anchor boxes and create pred_box_list to pass
+    # to lyft_dataset_sdk evaluation function
+    for box in final_boxes:
+        car_box = move_box_to_car_space(box)
+        box_dict = make_box_dict(car_box,token,score=True)
+        pred_box_list.append(box_dict)
+
+    map_list = []
+    class_names = list(set(class_names))
+    print('len pred boxes: ',len(pred_box_list))
+    # get the average precision for each iou threshold - evaluation score
+    # is the mean across all thresholds
+    for thresh in cfg.DATA.VAL_THRESH_LIST:
+        thresh_ap = get_average_precisions(gt_box_list,pred_box_list,
+                                           class_names,thresh)
+        map_list.append(np.mean(thresh_ap))
+
+    gc.collect()    
+    return np.mean(map_list)
+
+
 def evaluate(pp_model,anchor_box_list,data_mean,device):
 
     """

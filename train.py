@@ -10,13 +10,14 @@ import pdb
 import gc
 import pathlib
 import os.path as osp
-from evaluate import evaluate
+from evaluate import evaluate,evaluate_single
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches, patheffects
 from pyquaternion import Quaternion
 from utils.box_utils import boxes_to_image_space
 from lyft_dataset_sdk.utils.data_classes import LidarPointCloud,Box
+from sklearn.metrics import classification_report
 
 def get_batch(dataset,batch_size,ind):
     """
@@ -56,6 +57,7 @@ token_list = pickle.load(open(token_fp,'rb'))
 
 device     = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #device    = 'cpu'
+token_list = token_list[:250]
 pp_dataset = PPDataset(token_list,data_dict,anchor_boxes,
                       anchor_corners,anchor_centers,data_mean,training=True)
 
@@ -82,7 +84,7 @@ wd = cfg.NET.WEIGHT_DECAY
 params = list(pp_model.parameters())
 optim  = torch.optim.Adam(params,lr=lr,weight_decay=wd)
 
-load_model = True
+load_model = False
 model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint_0_2000.pth')
 optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint_0_2000.pth')
 
@@ -95,6 +97,8 @@ if load_model:
     gc.collect()
 
 else:
+
+    """
     #LSUV INIT
     (p,i,_,__) = next(iter(dataloader))
     p = p.to(device)
@@ -106,7 +110,7 @@ else:
     pp_model.backbone = LSUVinit(pp_model.backbone,scatter_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
     backbone_out = pp_model.backbone(scatter_out)
     pp_model.det_head = LSUVinit(pp_model.det_head,backbone_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
-
+    """
 # set last layer bias for focal loss init
     pi = 0.01
     pp_model.det_head.cls.bias.data.fill_(-np.log((1-pi)/pi))
@@ -118,9 +122,14 @@ b_ort = cfg.NET.B_ORT
 
 print('STARTING TRAINING')
 
+map_list = []
+
 for epoch in range(epochs):
     print('EPOCH: ',epoch)
     epoch_losses = []
+    epoch_cls_losses = []
+    optim.param_groups[0]['lr'] = cfg.NET.LR_SCHED[epoch]
+    print('LR: ',optim.param_groups[0]['lr'])
     progress_bar = tqdm(dataloader)
     for i,(pillar,inds,c_target,r_target) in enumerate(progress_bar):
         pillar = pillar.to(device)
@@ -128,12 +137,12 @@ for epoch in range(epochs):
         c_target = c_target.to(device)
         r_target = r_target.to(device)
         cls_tensor,reg_tensor = pp_model(pillar,inds)
-        c_loss,r_loss,o_loss,batch_loss = pp_loss(cls_tensor,reg_tensor,c_target,r_target) 
+        scores,c_loss,r_loss,o_loss,batch_loss = pp_loss(cls_tensor,reg_tensor,c_target,r_target) 
         optim.zero_grad()
         batch_loss.backward()
         optim.step()
         gc.collect()
-        if i % 10 == 0:
+        if i % 25 == 0:
             print('tot: ',batch_loss)
             print('-------------------------------------------------')
             print('cls raw: ',c_loss)
@@ -144,8 +153,21 @@ for epoch in range(epochs):
             print('reg wgt: ',b_reg*r_loss)
             print('ort wgt: ',b_ort*o_loss)
             print('-------------------------------------------------')
-
-        if i % 2000 == 0 and i!= 0:
+            epoch_losses.append(float(batch_loss.detach().cpu()))
+            epoch_cls_losses.append(float(c_loss.detach().cpu()))
+            pos_anchor_preds = torch.where(scores.detach() > 0.5,torch.Tensor([1]).to(device),torch.Tensor([0]).to(device))
+            pos_anchor_preds = pos_anchor_preds.reshape(-1).cpu().numpy()
+            pos_anchors      = c_target.detach().reshape(batch_size,-1).reshape(-1).cpu().numpy()
+            targ_names = ['neg','pos']
+            print(classification_report(pos_anchors,pos_anchor_preds,target_names=targ_names))
+            print('num pos preds: ', sum(pos_anchor_preds))
+            print('num pos anchs: ', sum(pos_anchors))
+            token = token_list[i*2]
+            mAP = evaluate_single(cls_tensor[0,...][None,...].detach(),reg_tensor[0,...][None,...].detach(),token,anchor_boxes,data_dict)
+            print('mAP: ',mAP)
+            map_list.append(mAP)
+            gc.collect()
+        if i % 2000 == 0 and i != 0:
             print('saving model checkpoint')
             with torch.no_grad():
                 cpdir = cfg.DATA.CKPT_DIR
@@ -161,9 +183,41 @@ for epoch in range(epochs):
                 print('val mAP: ',mAP)
                 gc.collect()    
         """
-    epoch_losses.append(batch_loss.detach().cpu().numpy())
 
-print('epoch losses: ',epoch_losses)
+"""
+
+pp_model.eval()
+
+for i,(pillar,inds,c_target,r_target) in enumerate(tqdm(dataloader)):
+    pillar = pillar.to(device)
+    inds = inds.to(device)
+    c_target = c_target.to(device)
+    r_target = r_target.to(device)
+    cls_tensor,reg_tensor = pp_model(pillar,inds)
+    scores,c_loss,r_loss,o_loss,batch_loss = pp_loss(cls_tensor,reg_tensor,c_target,r_target) 
+    gc.collect()
+    print('tot: ',batch_loss)
+    print('-------------------------------------------------')
+    print('cls raw: ',c_loss)
+    print('reg raw: ',r_loss)
+    print('ort raw: ',o_loss)
+    print('-------------------------------------------------')
+    print('cls wgt: ',b_cls*c_loss)
+    print('reg wgt: ',b_reg*r_loss)
+    print('ort wgt: ',b_ort*o_loss)
+    print('-------------------------------------------------')
+    pos_anchor_preds = torch.where(scores.detach() > 0.5,torch.Tensor([1]).to(device),torch.Tensor([0]).to(device))
+    pos_anchor_preds = pos_anchor_preds.reshape(-1).cpu().numpy()
+    pos_anchors      = c_target.detach().reshape(batch_size,-1).reshape(-1).cpu().numpy()
+    targ_names = ['neg','pos']
+    print(classification_report(pos_anchors,pos_anchor_preds,target_names=targ_names))
+"""
+
+cpdir = cfg.DATA.CKPT_DIR
+cpfp  = osp.join(cpdir,'pp_model_final.tar')
+torch.save(pp_model.state_dict(),cpfp)
+
+pickle.dump(map_list,open('map_list.pkl','wb'))
 print('TRAINING FINISHED')
 
 

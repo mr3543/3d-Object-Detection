@@ -60,10 +60,10 @@ if machine == 'cloud':
 # pillar parameters 
 cfg.DATA.X_MIN     = -60
 cfg.DATA.Y_MIN     = -60
-cfg.DATA.Z_MIN     = -3
+cfg.DATA.Z_MIN     = -10
 cfg.DATA.X_MAX     = 60
 cfg.DATA.Y_MAX     = 60
-cfg.DATA.Z_MAX     = 3
+cfg.DATA.Z_MAX     = 10
 cfg.DATA.X_STEP    = .2
 cfg.DATA.Y_STEP    = .2
 cfg.DATA.STEP      = .2
@@ -133,18 +133,21 @@ cfg.DATA.IND_TO_NAME       = {'0':'animal','1':'bicycle','2':'bus','3':'car','4'
 cfg.NET.FEATURE_NET_IN  = 9
 cfg.NET.FEATURE_NET_OUT = 64
 cfg.NET.BATCH_SIZE      = 2
-cfg.NET.EPOCHS          = 10
+cfg.NET.EPOCHS          = 20
 cfg.NET.LEARNING_RATE   = 1e-4
 cfg.NET.WEIGHT_DECAY    = 1e-4
-cfg.NET.NUM_WORKERS     = 3
+cfg.NET.NUM_WORKERS     = 4
+cfg.NET.LR_SCHED        = np.concatenate([np.linspace(5e-5,1e-3,8),np.linspace(1e-3,5e-5,8),np.array([1e-5]*4)])
+
 
 # loss parameters
 cfg.NET.B_ORT = .2
 cfg.NET.B_REG = 1
-cfg.NET.B_CLS = 25
+cfg.NET.B_CLS = 250
 cfg.NET.GAMMA = 2
-cfg.NET.POS_LABEL_WEIGHT = 25
+cfg.NET.POS_LABEL_WEIGHT = 500
 cfg.NET.CLASS_WEIGHTS = np.array([2177,28,79,1,4059,616,20,20,54])
+#cfg.NET.CLASS_WEIGHTS = np.array([1,1,1,1,1,1,1,1,1])
 
 # validation
 cfg.NET.VAL_MODEL = ''

@@ -90,7 +90,7 @@ def make_target(anchor_box,gt_box,anch):
 
     dt = np.sin(gt - at)
 
-    if (gt >= np.pi/2 and gt <= np.pi) or (gt >= (3*np.pi)/2 and gt <= 2*np.pi):
+    if (gt > 0):
         ort = 1
     else:
         ort = 0
