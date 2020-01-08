@@ -14,6 +14,7 @@ from pyquaternion import Quaternion
 from lyft_dataset_sdk.utils.data_classes import LidarPointCloud, Box
 from lyft_dataset_sdk.utils.geometry_utils import transform_matrix
 from lyft_dataset_sdk.lyftdataset import LyftDataset
+from lyft_dataset_sdk.utils.geometry_utils import points_in_box
 
 def boxes_to_image_space(boxes):
     """
@@ -222,7 +223,7 @@ def create_target(anchor_corners,
 
 
 
-def move_boxes_to_canvas_space(boxes,ego_pose):
+def move_boxes_to_canvas_space(boxes,ego_pose,lidar_points):
 
     """
         takes a list of ground truth boxes in global space
@@ -254,7 +255,10 @@ def move_boxes_to_canvas_space(boxes,ego_pose):
         if (box_x < x_min) or (box_x > x_max) or \
            (box_y < y_min) or (box_y > y_max) or \
            (box_z < z_min) or (box_z > z_max): continue
-    
+   
+        pts_in_box = np.sum(points_in_box(box,lidar_points))
+        if pts_in_box < 10: continue
+
         # compute new xy coordinates in canvas space
         canv_x = (box_x - cfg.DATA.X_MIN)/x_step
         canv_y = (box_y - cfg.DATA.Y_MIN)/y_step

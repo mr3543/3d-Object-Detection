@@ -29,7 +29,7 @@ class PPDataset(torch.utils.data.Dataset):
         self.anchor_centers = anchor_centers
         self.data_mean = data_mean
         self.min_dist = 0.001
-        self.num_sweeps = 10
+        self.num_sweeps = 3
 
     def __len__(self):
         return len(self.tokens)

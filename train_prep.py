@@ -71,7 +71,7 @@ for df,box_dir,lidar_dir,token_dir in zip(dfs,box_dirs,lidar_dirs,token_dirs):
             try:
                 # there may be currupted lidar files - mark these tokens 
                 # by setting the file path to the lidar file as None
-                lidar_filepath = l5d.get_sample_data_path(lidar_token)
+                lidar_filepath   = l5d.get_sample_data_path(lidar_token)
                 lidar_pointcloud = LidarPointCloud.from_file(lidar_filepath)
             except Exception as e:
                 print('Failed to load LIDAR cloud for {}: {}:'.format(token,e))
@@ -84,12 +84,17 @@ for df,box_dir,lidar_dir,token_dir in zip(dfs,box_dirs,lidar_dirs,token_dirs):
                 token = sample['next']
                 continue
             # get the lidar, ego and sensor objects for the token
-            lidar_data = l5d.get('sample_data',lidar_token)
-            ego_pose   = l5d.get('ego_pose',lidar_data['ego_pose_token'])
-            cal_sensor = l5d.get('calibrated_sensor',lidar_data['calibrated_sensor_token'])
+            lidar_data      = l5d.get('sample_data',lidar_token)
+            ego_pose        = l5d.get('ego_pose',lidar_data['ego_pose_token'])
+            cal_sensor      = l5d.get('calibrated_sensor',lidar_data['calibrated_sensor_token'])
+            car_from_sensor = transform_matrix(cal_sensor['translation'],
+                                               Quaternion(cal_sensor['rotation']),
+                                               inverse=False)
+            lidar_pointcloud.transform(car_from_sensor)
+            lidar_points = lidar_pointcloud.points[:3,:]
             boxes      = l5d.get_boxes(lidar_token)
             # collect the ground truth boxes
-            canv_boxes = move_boxes_to_canvas_space(boxes,ego_pose)
+            canv_boxes = move_boxes_to_canvas_space(boxes,ego_pose,lidar_points)
             boxes_fp   = osp.join(box_dir,token + '_boxes.pkl')
             pickle.dump(canv_boxes,open(boxes_fp,'wb'))
             prev_token = sample['prev']
