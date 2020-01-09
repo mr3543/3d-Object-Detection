@@ -11,7 +11,10 @@ from config import cfg
 from lyft_dataset_sdk.utils.data_classes import Box
 from lyft_dataset_sdk.eval.detection.mAP_evaluation import get_average_precisions
 from torchvision.ops import nms    
+import math
 
+def sigmoid(x):
+  return 1 / (1 + math.exp(-x))
 
 def make_box_dict(box,token,score):
     """
@@ -64,14 +67,14 @@ def make_pred_boxes(inds,anchor_box_list,reg,classes,scores,token):
         box_name = cfg.DATA.IND_TO_NAME[str(int(classes[i]))]
         box_yaw = np.arcsin(offsets[6]) + a_box.orientation.yaw_pitch_roll[0]
    
-        
-        if offsets[7] > offsets[8]:
+        """
+        if sigmoid(offsets[7]) < .5:
             box_ort = 1
         else:
             box_ort = -1
         
         box_yaw *= box_ort
-    
+        """
         # make new Box object
         quat = Quaternion(axis=[0,0,1],radians = box_yaw) 
         box = Box(center=[box_x,box_y,box_z],
