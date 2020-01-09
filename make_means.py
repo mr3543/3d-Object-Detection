@@ -12,7 +12,7 @@ this script computes the training dataset mean of the model input tensor
 ddfp = osp.join(cfg.DATA.LIDAR_TRAIN_DIR,'data_dict.pkl')
 tkfp = osp.join(cfg.DATA.TOKEN_TRAIN_DIR,'token_list.pkl')
 
-token_list = pickle.load(open(tkfp,'rb'))
+token_list = pickle.load(open(tkfp,'rb'))[:125]
 data_dict  = pickle.load(open(ddfp,'rb'))
 
 device     = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

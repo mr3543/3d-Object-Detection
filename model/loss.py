@@ -62,12 +62,12 @@ class PPLoss(nn.Module):
         loss_targs  = reg_targets[pos_anchors][...,1:8]
         reg_loss    = F.smooth_l1_loss(reg_scores,loss_targs,reduction='mean')
          
-        ort_scores  = reg_tensor[pos_anchors][...,7:]
-        ort_targets = reg_targets[pos_anchors][...,8].long()
-        ort_loss    = F.cross_entropy(ort_scores,ort_targets)
+        ort_scores  = reg_tensor[pos_anchors][...,7]
+        ort_targets = reg_targets[pos_anchors][...,8]
+        ort_loss    = F.binary_cross_entropy_with_logits(ort_scores,ort_targets)
         
         total_loss = self.b_cls*cls_loss + self.b_reg*reg_loss + self.b_ort*ort_loss
-        return p,cls_loss,reg_loss,ort_loss,total_loss
+        return cls_loss,reg_loss,ort_loss,total_loss
 
 
 

@@ -8,9 +8,9 @@ cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
 
-#machine = 'local'
+machine = 'local'
 #machine = 'cloud'
-machine = 'vastai'
+#machine = 'vastai'
 
 # set the directories according to the machine type
 
@@ -76,23 +76,37 @@ cfg.DATA.CANVAS_HEIGHT = np.int32((cfg.DATA.Y_MAX - cfg.DATA.Y_MIN)/cfg.DATA.Y_S
 cfg.DATA.CANVAS_WIDTH  = np.int32((cfg.DATA.X_MAX - cfg.DATA.X_MIN)/cfg.DATA.X_STEP)
 
 # approximate average box sizes of each category 
-animal            = np.array([.5,1,.5])/cfg.DATA.STEP
-bicycle           = np.array([.75,2,1.5])/cfg.DATA.STEP
-bus               = np.array([3,12.5,3.5])/cfg.DATA.STEP
-car               = np.array([2,5,1.75])/cfg.DATA.STEP
-emergency_vehicle = np.array([2.5,6.5,2.5])/cfg.DATA.STEP
-motorcycle        = np.array([1,2.5,1.5])/cfg.DATA.STEP
-other_vehicle     = np.array([2.75,8.5,3.5])/cfg.DATA.STEP
-pedestrian        = np.array([.75,.75,1.75])/cfg.DATA.STEP
-truck             = np.array([3,10,3.5])/cfg.DATA.STEP
+animal            = np.array([.5,1,.5])
+animal[:2] = animal[:2]/cfg.DATA.STEP
+bicycle           = np.array([.75,2,1.5])
+bicycle[:2] = bicycle[:2]/cfg.DATA.STEP
+bus               = np.array([3,12.5,3.5])
+bus[:2] = bus[:2]/cfg.DATA.STEP
+car               = np.array([2,5,1.75])
+car[:2] = car[:2]/cfg.DATA.STEP
+emergency_vehicle = np.array([2.5,6.5,2.5])
+emergency_vehicle[:2] = emergency_vehicle[:2]/cfg.DATA.STEP
+motorcycle        = np.array([1,2.5,1.5])
+motorcycle[:2] = motorcycle[:2]/cfg.DATA.STEP
+other_vehicle     = np.array([2.75,8.5,3.5])
+other_vehicle[:2] = other_vehicle[:2]/cfg.DATA.STEP
+pedestrian        = np.array([.75,.75,1.75])
+pedestrian[:2] = pedestrian[:2]/cfg.DATA.STEP
+truck             = np.array([3,10,3.5])
+truck[:2] = truck[:2]/cfg.DATA.STEP
 
 # group the classes into categories according to size
+"""
 small = np.stack((animal,bicycle,pedestrian,motorcycle))
 small = np.mean(small,axis=0)
 med   = car
 large = np.stack((bus,emergency_vehicle,truck,other_vehicle))
 large = np.mean(large,axis=0)
 
+small[:2] = small[:2]/cfg.DATA.STEP
+med[:2]   = med[:2]/cfg.DATA.STEP
+large[:2] = large[:2]/cfg.DATA.STEP
+"""
 # classes and class names
 cfg.DATA.NUM_CLASSES = 9
 cfg.DATA.CLASS_NAMES = ['animal','bicycle','bus','car','emergency_vehicle',
@@ -100,19 +114,19 @@ cfg.DATA.CLASS_NAMES = ['animal','bicycle','bus','car','emergency_vehicle',
 
 # uncomment according to whether you want to use 2 anchor boxes per category
 # or group the classes into sizes
-"""
+
 cfg.DATA.ANCHOR_DIMS = [animal,animal,bicycle,bicycle,bus,bus,\
                car,car,emergency_vehicle,emergency_vehicle, \
                motorcycle,motorcycle,other_vehicle,other_vehicle,\
                pedestrian,pedestrian,truck,truck]
-"""
-cfg.DATA.ANCHOR_DIMS = [small,small,med,med,large,large]
+
+#cfg.DATA.ANCHOR_DIMS = [small,small,med,med,large,large]
 
 
-#cfg.DATA.ANCHOR_YAWS = [0,90]*cfg.DATA.NUM_CLASSES
-cfg.DATA.ANCHOR_YAWS = [0,90]*3
-#cfg.DATA.ANCHOR_ZS   = [0]*2 +[.75]*2 + [1.5]*2 +[.75]*2 + [1.15]*2 + [.5]*2 + [1.15]*2 +[1]*2 +[1.5]*2
-cfg.DATA.ANCHOR_ZS   = [.5]*2 + [.75]*2 + [1.0]*2
+cfg.DATA.ANCHOR_YAWS = [0,90]*cfg.DATA.NUM_CLASSES
+#cfg.DATA.ANCHOR_YAWS = [0,90]*3
+cfg.DATA.ANCHOR_ZS   = [0]*2 +[.75]*2 + [1.5]*2 +[.75]*2 + [1.15]*2 + [.5]*2 + [1.15]*2 +[1]*2 +[1.5]*2
+#cfg.DATA.ANCHOR_ZS   = [.5]*2 + [.75]*2 + [1.0]*2
 cfg.DATA.NUM_ANCHORS = len(cfg.DATA.ANCHOR_DIMS)
 
 # pillar tensor & iou settings
@@ -141,7 +155,7 @@ cfg.NET.LR_SCHED        = np.concatenate([np.linspace(5e-5,1e-3,8),np.linspace(1
 
 
 # loss parameters
-cfg.NET.B_ORT = .2
+cfg.NET.B_ORT = 0
 cfg.NET.B_REG = 1
 cfg.NET.B_CLS = 250
 cfg.NET.GAMMA = 2

@@ -89,13 +89,23 @@ def make_target(anchor_box,gt_box,anch):
     dl = np.log(gl/al)
     dh = np.log(gh/ah)
 
+    if (gt <= np.pi and gt >= np.pi/2): 
+        gt -= np.pi
+    elif (gt >= -np.pi and gt <= -np.pi/2):
+        gt += np.pi
+    
     dt = np.sin(gt - at)
-
-    if (gt > 0):
+    
+    if ((gt-at) <= np.pi and (gt-at) >= np.pi/2) or ((gt-at) >= -np.pi and (gt-at) <= -np.pi/2):
         ort = 1
     else:
         ort = 0
-
+    """
+    if gt > 0:
+        ort=1
+    else:
+        ort=0
+    """
     return [1,dx,dy,dz,dw,dl,dh,dt,ort]
 
 def make_anchor_boxes():
@@ -205,20 +215,20 @@ def create_target(anchor_corners,
 
     # regression targets are made in the the same manner, first by positive
     # anchors, then by highest iou anchor box for each ground truth box
-    #anch_dict = {}
+    anch_dict = {}
     for i,anch in enumerate(pos_anchors):
         reg_targets[anch,:] = make_target(anchor_box_list[anch],
                                           gt_box_list[pos_boxes[i]],anch)
-        #anch_dict[anch] = pos_boxes[i]
+        anch_dict[anch] = pos_boxes[i]
 
     matched_boxes = [gt_box_list[i] for i in filter_inds[0]]
     #matched_boxes = gt_box_list
     for i,anch in enumerate(top_anchor_for_box):
         reg_targets[anch,:] = make_target(anchor_box_list[anch],
                                           matched_boxes[i],anch)
-        #anch_dict[anch] = i
+        anch_dict[anch] = i
     
-    #pickle.dump(anch_dict,open('anch_dict.pkl','wb'))
+    pickle.dump(anch_dict,open('anch_dict.pkl','wb'))
     return cls_targets,reg_targets
 
 

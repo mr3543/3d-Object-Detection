@@ -45,6 +45,8 @@ crnfp = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_corners.pkl')
 cenfp = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_centers.pkl')
 xyfp = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_xy.pkl')
 token_fp = osp.join(cfg.DATA.TOKEN_TRAIN_DIR,'token_list.pkl')
+val_token_fp = osp.join(cfg.DATA.TOKEN_VAL_DIR,'token_list.pkl')
+val_ddfp = osp.join(cfg.DATA.LIDAR_VAL_DIR,'data_dict.pkl')
 
 # load data for traning
 data_dict = pickle.load(open(ddfp,'rb'))
@@ -71,7 +73,7 @@ dataloader  = torch.utils.data.DataLoader(pp_dataset,batch_size,
 fn_in = cfg.NET.FEATURE_NET_IN
 fn_out = cfg.NET.FEATURE_NET_OUT
 cls_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.NUM_CLASSES
-reg_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.REG_DIMS
+reg_channels = len(cfg.DATA.ANCHOR_DIMS)*cfg.DATA.REG_DIMS - 1
 
 pp_model = PPModel(fn_in,fn_out,cls_channels,reg_channels,device)
 pp_loss  = PPLoss(cfg.NET.B_ORT,cfg.NET.B_REG,cfg.NET.B_CLS,cfg.NET.GAMMA,device)
@@ -175,6 +177,14 @@ for epoch in range(epochs):
                 torch.save(pp_model.state_dict(),cpfp)
                 opfp  = osp.join(cpdir,'optim_checkpoint_{}_{}.pth'.format(epoch,i))
                 torch.save(optim.state_dict(),opfp)
+            print('evaluating model')
+            val_token_list = pickle.load(open(val_token_fp,'rb'))
+            val_data_dict  = pickle.load(open(val_ddfp,'rb'))
+            tokens_for_eval = np.random.choice(val_token_list,100)
+            maps = []
+            for t in tokens_for_eval:
+                maps.append(evaluate_single(cls_tensor,reg_tensor,t,anchor_boxes,data_dict))
+        
         """
         if i % 4000 == 0 and i != 0:
             with torch.no_grad():
