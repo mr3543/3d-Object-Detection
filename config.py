@@ -8,9 +8,8 @@ cfg = edict()
 cfg.DATA = edict()
 cfg.NET = edict()
 
-machine = 'local'
-#machine = 'cloud'
-#machine = 'vastai'
+#machine = 'local'
+machine = 'vastai'
 
 # set the directories according to the machine type
 
@@ -42,20 +41,6 @@ if machine == 'local':
     cfg.DATA.LIDAR_VAL_DIR   = '/home/mmr/PointPillars/lidars/validation'
     cfg.DATA.TOKEN_TRAIN_DIR = '/home/mmr/PointPillars/tokens/training'
     cfg.DATA.TOKEN_VAL_DIR   = '/home/mmr/PointPillars/tokens/validation'
-
-
-if machine == 'cloud':
-    cfg.DATA.ROOT_DIR        = '/home/michaelregan/data/'
-    cfg.DATA.CKPT_DIR        = '/home/michaelregan/PointPillars/ckpts'
-    cfg.DATA.DATA_PATH       = '/home/michaelregan/data/'
-    cfg.DATA.TRAIN_JSON_PATH = '/home/michaelregan/data/train_data'
-    cfg.DATA.BOX_TRAIN_DIR   = '/home/michaelregan/PointPillars/boxes/training'
-    cfg.DATA.BOX_VAL_DIR     = '/home/michaelregan/PointPillars/boxes/validation'
-    cfg.DATA.ANCHOR_DIR      = '/home/michaelregan/PointPillars/anchors'
-    cfg.DATA.LIDAR_TRAIN_DIR = '/home/michaelregan/PointPillars/lidars/training'
-    cfg.DATA.LIDAR_VAL_DIR   = '/home/michaelregan/PointPillars/lidars/validation'
-    cfg.DATA.TOKEN_TRAIN_DIR = '/home/michaelregan/PointPillars/tokens/training'
-    cfg.DATA.TOKEN_VAL_DIR   = '/home/michaelregan/PointPillars/tokens/validation'
 
 # pillar parameters 
 cfg.DATA.X_MIN     = -60
@@ -96,13 +81,14 @@ truck             = np.array([3,10,3.5])
 truck[:2] = truck[:2]/cfg.DATA.STEP
 
 # group the classes into categories according to size
-"""
+
 small = np.stack((animal,bicycle,pedestrian,motorcycle))
 small = np.mean(small,axis=0)
 med   = car
 large = np.stack((bus,emergency_vehicle,truck,other_vehicle))
 large = np.mean(large,axis=0)
 
+"""
 small[:2] = small[:2]/cfg.DATA.STEP
 med[:2]   = med[:2]/cfg.DATA.STEP
 large[:2] = large[:2]/cfg.DATA.STEP
@@ -114,25 +100,25 @@ cfg.DATA.CLASS_NAMES = ['animal','bicycle','bus','car','emergency_vehicle',
 
 # uncomment according to whether you want to use 2 anchor boxes per category
 # or group the classes into sizes
-
+"""
 cfg.DATA.ANCHOR_DIMS = [animal,animal,bicycle,bicycle,bus,bus,\
                car,car,emergency_vehicle,emergency_vehicle, \
                motorcycle,motorcycle,other_vehicle,other_vehicle,\
                pedestrian,pedestrian,truck,truck]
+"""
+cfg.DATA.ANCHOR_DIMS = [small,small,med,med,large,large]
 
-#cfg.DATA.ANCHOR_DIMS = [small,small,med,med,large,large]
 
-
-cfg.DATA.ANCHOR_YAWS = [0,90]*cfg.DATA.NUM_CLASSES
-#cfg.DATA.ANCHOR_YAWS = [0,90]*3
-cfg.DATA.ANCHOR_ZS   = [0]*2 +[.75]*2 + [1.5]*2 +[.75]*2 + [1.15]*2 + [.5]*2 + [1.15]*2 +[1]*2 +[1.5]*2
-#cfg.DATA.ANCHOR_ZS   = [.5]*2 + [.75]*2 + [1.0]*2
+#cfg.DATA.ANCHOR_YAWS = [0,90]*cfg.DATA.NUM_CLASSES
+cfg.DATA.ANCHOR_YAWS = [0,90]*3
+#cfg.DATA.ANCHOR_ZS   = [0]*2 +[.75]*2 + [1.5]*2 +[.75]*2 + [1.15]*2 + [.5]*2 + [1.15]*2 +[1]*2 +[1.5]*2
+cfg.DATA.ANCHOR_ZS   = [.5]*2 + [.75]*2 + [1.0]*2
 cfg.DATA.NUM_ANCHORS = len(cfg.DATA.ANCHOR_DIMS)
 
 # pillar tensor & iou settings
-cfg.DATA.MAX_POINTS_PER_PILLAR = 100
-cfg.DATA.MAX_PILLARS    = 12000
-cfg.DATA.REG_DIMS       = 9
+cfg.DATA.MAX_POINTS_PER_PILLAR = 200
+cfg.DATA.MAX_PILLARS    = 24000
+cfg.DATA.REG_DIMS       = 8
 cfg.DATA.IOU_POS_THRESH = .6
 cfg.DATA.IOU_NEG_THRESH = .45
 
@@ -146,12 +132,12 @@ cfg.DATA.IND_TO_NAME       = {'0':'animal','1':'bicycle','2':'bus','3':'car','4'
 # model parameters
 cfg.NET.FEATURE_NET_IN  = 9
 cfg.NET.FEATURE_NET_OUT = 64
-cfg.NET.BATCH_SIZE      = 2
+cfg.NET.BATCH_SIZE      = 1
 cfg.NET.EPOCHS          = 20
 cfg.NET.LEARNING_RATE   = 1e-4
 cfg.NET.WEIGHT_DECAY    = 1e-4
 cfg.NET.NUM_WORKERS     = 4
-cfg.NET.LR_SCHED        = np.concatenate([np.linspace(5e-5,1e-3,8),np.linspace(1e-3,5e-5,8),np.array([1e-5]*4)])
+cfg.NET.LR_SCHED        = np.concatenate([np.linspace(1e-4,1e-2,8),np.linspace(1e-2,1e-4,8),np.array([1e-5]*4)])
 
 
 # loss parameters

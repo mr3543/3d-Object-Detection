@@ -195,20 +195,16 @@ def evaluate_single(cls_tensor,reg_tensor,token,anchor_box_list,data_dict):
     return np.mean(map_list)
 
 
-def evaluate(pp_model,anchor_box_list,data_mean,device):
+def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
 
     """
     evaluates the model on the validation set
     """
     gc.collect()
     # load the data and tokens for the validation set
-    data_dict_fp = osp.join(cfg.DATA.LIDAR_VAL_DIR,'data_dict.pkl')
-    token_fp     = osp.join(cfg.DATA.TOKEN_VAL_DIR,'token_list.pkl')
     anch_xy_fp   = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_xy.pkl')
 
-    data_dict    = pickle.load(open(data_dict_fp,'rb'))
     data_mean    = pickle.load(open('pillar_means.pkl','rb')) 
-    token_list   = pickle.load(open(token_fp,'rb'))
     anchor_xy    = pickle.load(open(anch_xy_fp,'rb'))
 
     # set model to eval mode and create a dataloader with validation

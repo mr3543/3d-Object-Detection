@@ -27,7 +27,6 @@ class PPLoss(nn.Module):
         #cls_channels = anchor_dims * (num_classes+1)
         #reg_channels = anchor_dims * reg_dims
        
-       
         # convert to [B,H,W,anch*num_classes]
         cls_tensor  = cls_tensor.permute(0,2,3,1)
         cls_size    = cls_tensor.size()
@@ -67,7 +66,7 @@ class PPLoss(nn.Module):
         ort_loss    = F.binary_cross_entropy_with_logits(ort_scores,ort_targets)
         
         total_loss = self.b_cls*cls_loss + self.b_reg*reg_loss + self.b_ort*ort_loss
-        return cls_loss,reg_loss,ort_loss,total_loss
+        return p,cls_loss,reg_loss,ort_loss,total_loss
 
 
 

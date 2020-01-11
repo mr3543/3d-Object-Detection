@@ -183,7 +183,7 @@ def create_target(anchor_corners,
                    anchor_centers,gt_centers,ious)
     
     cls_targets = np.zeros((len(anchor_box_list),cfg.DATA.NUM_CLASSES))   
-    reg_targets = np.zeros((len(anchor_box_list),cfg.DATA.REG_DIMS))
+    reg_targets = np.zeros((len(anchor_box_list),cfg.DATA.REG_DIMS+1))
     
     # get the classes for each ground truth box
     gt_box_classes = np.array([cfg.DATA.NAME_TO_IND[box.name] for box in gt_box_list],dtype=np.int32)
@@ -215,20 +215,20 @@ def create_target(anchor_corners,
 
     # regression targets are made in the the same manner, first by positive
     # anchors, then by highest iou anchor box for each ground truth box
-    anch_dict = {}
+    #anch_dict = {}
     for i,anch in enumerate(pos_anchors):
         reg_targets[anch,:] = make_target(anchor_box_list[anch],
                                           gt_box_list[pos_boxes[i]],anch)
-        anch_dict[anch] = pos_boxes[i]
+        #anch_dict[anch] = pos_boxes[i]
 
     matched_boxes = [gt_box_list[i] for i in filter_inds[0]]
     #matched_boxes = gt_box_list
     for i,anch in enumerate(top_anchor_for_box):
         reg_targets[anch,:] = make_target(anchor_box_list[anch],
                                           matched_boxes[i],anch)
-        anch_dict[anch] = i
+        #anch_dict[anch] = i
     
-    pickle.dump(anch_dict,open('anch_dict.pkl','wb'))
+    #pickle.dump(anch_dict,open('anch_dict.pkl','wb'))
     return cls_targets,reg_targets
 
 
