@@ -171,7 +171,7 @@ for epoch in range(epochs):
             mAP = evaluate_single(cls_tensor[0,...][None,...].detach(),reg_tensor[0,...][None,...].detach(),token,anchor_boxes,data_dict)
             print('mAP: ',mAP)
             gc.collect()
-        if i % 8000 == 0 and i != 0:
+        if i % 8000 == 0:
             print('saving model checkpoint')
             with torch.no_grad():
                 cpdir = cfg.DATA.CKPT_DIR

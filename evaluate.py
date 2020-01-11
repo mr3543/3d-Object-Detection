@@ -250,6 +250,7 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
 
         # loop through ground truth boxes and add create gt_box_list to pass
         # to lyft_dataset_sdk evaluation function
+        print('TOKEN: ',token_list[i])
         for box in gt_boxes:
             car_box = move_box_to_car_space(box,image=False)
             box_dict = make_box_dict(car_box,token_list[i],score=False)
