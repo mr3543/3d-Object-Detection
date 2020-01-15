@@ -21,10 +21,10 @@ def make_box_dict(box,token,score):
     makes box dict for lyft mAP 
     """
     bd = {'sample_token': token,
-         'translation' : list(box.center),
-         'size'        : list(box.wlh),
-         'rotation'    : list(box.orientation),
-         'name'        : box.name}
+         'translation'  : list(box.center),
+         'size'         : list(box.wlh),
+         'rotation'     : list(box.orientation),
+         'name'         : box.name}
     if score:
         bd['score'] = box.score
     
@@ -192,7 +192,7 @@ def evaluate_single(cls_tensor,reg_tensor,token,anchor_box_list,data_dict):
         map_list.append(np.mean(thresh_ap))
 
     gc.collect()    
-    return np.mean(map_list)
+    return map_list
 
 
 def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
@@ -222,6 +222,12 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
     # loop through validation data
     for i,(p,inds) in tqdm(enumerate(dataloader),total=len(pp_dataset)):
         
+        if type(token_list[i]) != type(''):
+            print('NON STRING TYPE')
+            print('index: ',i)
+            print('token: ',token_list[i])
+            print('token type: ',type(token_list[i]))
+
         # get model output
         p = p.to(device)
         inds = inds.to(device)
@@ -250,7 +256,6 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
 
         # loop through ground truth boxes and add create gt_box_list to pass
         # to lyft_dataset_sdk evaluation function
-        print('TOKEN: ',token_list[i])
         for box in gt_boxes:
             car_box = move_box_to_car_space(box,image=False)
             box_dict = make_box_dict(car_box,token_list[i],score=False)
@@ -274,7 +279,7 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
         map_list.append(np.mean(thresh_ap))
 
     
-    return np.mean(map_list)
+    return map_list
 
 def write_submission(boxes):
     """
