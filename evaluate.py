@@ -209,7 +209,7 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
 
     # set model to eval mode and create a dataloader with validation
     # data
-    pp_model   = pp_model.eval()
+    pp_model.eval()
     pp_dataset = PPDataset(token_list,data_dict,None,None,None,
                            data_mean=data_mean,training=False)
                           
@@ -218,16 +218,10 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
 
     gt_box_list   = []
     pred_box_list = []
-
+    class_names = []
     # loop through validation data
-    for i,(p,inds) in tqdm(enumerate(dataloader),total=len(pp_dataset)):
-        
-        if type(token_list[i]) != type(''):
-            print('NON STRING TYPE')
-            print('index: ',i)
-            print('token: ',token_list[i])
-            print('token type: ',type(token_list[i]))
-
+    for i,(p,inds,tok) in tqdm(enumerate(dataloader),total=len(pp_dataset)):
+       
         # get model output
         p = p.to(device)
         inds = inds.to(device)
@@ -260,6 +254,7 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
             car_box = move_box_to_car_space(box,image=False)
             box_dict = make_box_dict(car_box,token_list[i],score=False)
             gt_box_list.append(box_dict)
+            class_names.append(box.name)
 
         # loop through anchor boxes and create pred_box_list to pass
         # to lyft_dataset_sdk evaluation function
@@ -271,11 +266,12 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
         gc.collect()
 
     map_list = []
+    class_names = list(set(class_names))
     # get the average precision for each iou threshold - evaluation score
     # is the mean across all thresholds
     for thresh in cfg.DATA.VAL_THRESH_LIST:
         thresh_ap = get_average_precisions(gt_box_list,pred_box_list,
-                                           cfg.DATA.CLASS_NAMES,thresh)
+                                           class_names,thresh)
         map_list.append(np.mean(thresh_ap))
 
     

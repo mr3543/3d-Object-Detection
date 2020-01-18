@@ -28,16 +28,19 @@ def get_batch(dataset,batch_size,ind):
     """
     pil_list = []
     ind_list = []
-    tar_list = []
+    c_tar_list = []
+    r_tar_list = []
     for i in range(ind,ind + batch_size):
-        pil,ind,tar = dataset[i]
+        pil,ind,c_tar,r_tar = dataset[i]
         pil_list.append(pil)
         ind_list.append(ind)
-        tar_list.append(tar)
+        c_tar_list.append(c_tar)
+        r_tar_list.append(r_tar)
     pil_out = torch.stack(pil_list)
     ind_out = torch.stack(ind_list)
-    tar_out = torch.stack(tar_list)
-    return (pil_out,ind_out,tar_out)
+    c_tar_out = torch.stack(c_tar_list)
+    r_tar_out = torch.stack(r_tar_list)
+    return (pil_out,ind_out,c_tar_out,r_tar_out)
 
 # make filepaths
 ddfp = osp.join(cfg.DATA.LIDAR_TRAIN_DIR,'data_dict.pkl')
@@ -81,6 +84,7 @@ pp_loss  = PPLoss(cfg.NET.B_ORT,cfg.NET.B_REG,cfg.NET.B_CLS,cfg.NET.GAMMA,device
 pp_model = pp_model.to(device)
 pp_loss  = pp_loss.to(device)
 
+
 if torch.cuda.device_count() > 1:
     pp_model = nn.DataParallel(pp_model)
     batch_size *= 2 
@@ -92,8 +96,8 @@ params = list(pp_model.parameters())
 optim  = torch.optim.Adam(params,lr=lr,weight_decay=wd)
 
 load_model = True
-model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint_2_8000.tar')
-optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint_2_8000.tar')
+model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint_11_8000.tar')
+optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint_11_8000.tar')
 
 if load_model:
     err_code = pp_model.load_state_dict(torch.load(model_fp))
@@ -122,6 +126,11 @@ else:
     pi = 0.01
     pp_model.det_head.cls.bias.data.fill_(-np.log((1-pi)/pi))
 
+"""
+if torch.cuda.device_count() > 1:
+    pp_model = nn.DataParallel(pp_model)
+    batch_size *= 2 
+"""
 
 dataloader  = torch.utils.data.DataLoader(pp_dataset,batch_size,
                                          shuffle=False,num_workers=num_workers)
@@ -134,7 +143,8 @@ print('STARTING TRAINING')
 
 map_list = []
 
-for epoch in range(3,epochs):
+epoch_start = 0
+for epoch in range(epoch_start,epochs):
     print('EPOCH: ',epoch)
     epoch_losses = []
     epoch_cls_losses = []
@@ -175,7 +185,7 @@ for epoch in range(3,epochs):
             print('num pos anchs: ', sum(pos_anchors))
             token = token_list[i*2]
             """
-            token = token_list[i]
+            token = token_list[batch_size*i]
             mAP = evaluate_single(cls_tensor[0,...][None,...].detach(),reg_tensor[0,...][None,...].detach(),token,anchor_boxes,data_dict)
             print('mAP: ',mAP)
             gc.collect()
@@ -191,15 +201,20 @@ for epoch in range(3,epochs):
             with torch.no_grad():
                 val_token_list = pickle.load(open(val_token_fp,'rb'))
                 val_data_dict  = pickle.load(open(val_ddfp,'rb'))
-                tokens_for_eval = np.random.choice(val_token_list,100)
+                val_tokens_for_eval = np.random.choice(val_token_list,100)
+                train_tokens_for_eval = np.random.choice(token_list,100)
                 # must convert from type numpy.str_ to str to avoid assertion fail
                 # in lyft eval script :( 
-                tokens_for_eval = [str(t) for t in tokens_for_eval]
+                val_tokens_for_eval   = [str(t) for t in val_tokens_for_eval]
+                train_tokens_for_eval = [str(t) for t in train_tokens_for_eval] 
+
                 pp_model.eval()
-                val_map = evaluate(pp_model,anchor_boxes,tokens_for_eval,val_data_dict,device)
+                val_map = evaluate(pp_model,anchor_boxes,val_tokens_for_eval,val_data_dict,device)
                 print('Val mAP: ',val_map) 
                 map_list.append(np.mean(mAP))
                 pickle.dump(map_list,open('val_maps.pkl','wb'))
+                train_map = evaluate(pp_model,anchor_boxes,train_tokens_for_eval,data_dict,device)
+                print('Train mAP: ',train_map)
                 gc.collect()
             pp_model.train()
 

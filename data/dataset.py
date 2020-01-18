@@ -119,6 +119,6 @@ class PPDataset(torch.utils.data.Dataset):
             gc.collect()
             return (pillar,indices,c_target,r_target)
         
-        return (pillar,indices)
+        return (pillar,indices,token)
 
 
