@@ -132,12 +132,12 @@ cfg.DATA.IND_TO_NAME       = {'0':'animal','1':'bicycle','2':'bus','3':'car','4'
 # model parameters
 cfg.NET.FEATURE_NET_IN  = 9
 cfg.NET.FEATURE_NET_OUT = 64
-cfg.NET.BATCH_SIZE      = 1
+cfg.NET.BATCH_SIZE      = 4
 cfg.NET.EPOCHS          = 20
 cfg.NET.LEARNING_RATE   = 1e-4
 cfg.NET.WEIGHT_DECAY    = 1e-4
-cfg.NET.NUM_WORKERS     = 3
-cfg.NET.LR_SCHED        = np.concatenate([np.linspace(1e-4,1e-2,8),np.linspace(1e-2,1e-4,8),np.array([1e-5]*4)])
+cfg.NET.NUM_WORKERS     = 4
+cfg.NET.LR_SCHED        = np.concatenate([np.linspace(5e-5,1e-3,8),np.linspace(1e-3,5e-5,8),np.array([1e-5]*4)])
 
 
 # loss parameters

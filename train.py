@@ -87,7 +87,6 @@ pp_loss  = pp_loss.to(device)
 
 if torch.cuda.device_count() > 1:
     pp_model = nn.DataParallel(pp_model)
-    batch_size *= 2 
 
 
 lr = cfg.NET.LEARNING_RATE
@@ -96,8 +95,8 @@ params = list(pp_model.parameters())
 optim  = torch.optim.Adam(params,lr=lr,weight_decay=wd)
 
 load_model = True
-model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint_11_8000.tar')
-optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint_11_8000.tar')
+model_fp = osp.join(cfg.DATA.CKPT_DIR,'pp_checkpoint_12_4000.tar')
+optim_fp = osp.join(cfg.DATA.CKPT_DIR,'optim_checkpoint_12_4000.tar')
 
 if load_model:
     err_code = pp_model.load_state_dict(torch.load(model_fp))
@@ -129,7 +128,6 @@ else:
 """
 if torch.cuda.device_count() > 1:
     pp_model = nn.DataParallel(pp_model)
-    batch_size *= 2 
 """
 
 dataloader  = torch.utils.data.DataLoader(pp_dataset,batch_size,
@@ -143,7 +141,7 @@ print('STARTING TRAINING')
 
 map_list = []
 
-epoch_start = 0
+epoch_start = 12
 for epoch in range(epoch_start,epochs):
     print('EPOCH: ',epoch)
     epoch_losses = []
@@ -162,7 +160,7 @@ for epoch in range(epoch_start,epochs):
         batch_loss.backward()
         optim.step()
         gc.collect()
-        if i % 500 == 0:
+        if i % 1000 == 0:
             print('tot: ',batch_loss)
             print('-------------------------------------------------')
             print('cls raw: ',c_loss)
@@ -188,14 +186,17 @@ for epoch in range(epoch_start,epochs):
             token = token_list[batch_size*i]
             mAP = evaluate_single(cls_tensor[0,...][None,...].detach(),reg_tensor[0,...][None,...].detach(),token,anchor_boxes,data_dict)
             print('mAP: ',mAP)
+            print('mAP: ',np.mean(mAP))
             gc.collect()
         if i % 4000 == 0 and i != 0:
+            
             print('saving model checkpoint')
             cpdir = cfg.DATA.CKPT_DIR
             cpfp  = osp.join(cpdir,'pp_checkpoint_{}_{}.tar'.format(epoch,i))
             torch.save(pp_model.state_dict(),cpfp)
             opfp  = osp.join(cpdir,'optim_checkpoint_{}_{}.tar'.format(epoch,i))
             torch.save(optim.state_dict(),opfp)
+             
             print('evaluating model')
             
             with torch.no_grad():
@@ -210,11 +211,13 @@ for epoch in range(epoch_start,epochs):
 
                 pp_model.eval()
                 val_map = evaluate(pp_model,anchor_boxes,val_tokens_for_eval,val_data_dict,device)
-                print('Val mAP: ',val_map) 
+                print('Val mAP: ',val_map)
+                print('Val mAP: ',np.mean(val_map))
                 map_list.append(np.mean(mAP))
                 pickle.dump(map_list,open('val_maps.pkl','wb'))
                 train_map = evaluate(pp_model,anchor_boxes,train_tokens_for_eval,data_dict,device)
                 print('Train mAP: ',train_map)
+                print('Train mAP: ',np.mean(train_map))
                 gc.collect()
             pp_model.train()
 

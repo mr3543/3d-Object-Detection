@@ -214,13 +214,13 @@ def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
                            data_mean=data_mean,training=False)
                           
     dataloader = torch.utils.data.DataLoader(pp_dataset,batch_size=1,shuffle=False,
-                                             num_workers=1)
+                                             num_workers=0)
 
     gt_box_list   = []
     pred_box_list = []
     class_names = []
     # loop through validation data
-    for i,(p,inds,tok) in tqdm(enumerate(dataloader),total=len(pp_dataset)):
+    for i,(p,inds) in tqdm(enumerate(dataloader),total=len(pp_dataset)):
        
         # get model output
         p = p.to(device)
