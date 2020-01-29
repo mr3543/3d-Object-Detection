@@ -21,10 +21,10 @@ def make_box_dict(box,token,score):
     makes box dict for lyft mAP 
     """
     bd = {'sample_token': token,
-         'translation' : list(box.center),
-         'size'        : list(box.wlh),
-         'rotation'    : list(box.orientation),
-         'name'        : box.name}
+         'translation'  : list(box.center),
+         'size'         : list(box.wlh),
+         'rotation'     : list(box.orientation),
+         'name'         : box.name}
     if score:
         bd['score'] = box.score
     
@@ -192,40 +192,36 @@ def evaluate_single(cls_tensor,reg_tensor,token,anchor_box_list,data_dict):
         map_list.append(np.mean(thresh_ap))
 
     gc.collect()    
-    return np.mean(map_list)
+    return map_list
 
 
-def evaluate(pp_model,anchor_box_list,data_mean,device):
+def evaluate(pp_model,anchor_box_list,token_list,data_dict,device):
 
     """
     evaluates the model on the validation set
     """
     gc.collect()
     # load the data and tokens for the validation set
-    data_dict_fp = osp.join(cfg.DATA.LIDAR_VAL_DIR,'data_dict.pkl')
-    token_fp     = osp.join(cfg.DATA.TOKEN_VAL_DIR,'token_list.pkl')
     anch_xy_fp   = osp.join(cfg.DATA.ANCHOR_DIR,'anchor_xy.pkl')
 
-    data_dict    = pickle.load(open(data_dict_fp,'rb'))
     data_mean    = pickle.load(open('pillar_means.pkl','rb')) 
-    token_list   = pickle.load(open(token_fp,'rb'))
     anchor_xy    = pickle.load(open(anch_xy_fp,'rb'))
 
     # set model to eval mode and create a dataloader with validation
     # data
-    pp_model   = pp_model.eval()
+    pp_model.eval()
     pp_dataset = PPDataset(token_list,data_dict,None,None,None,
                            data_mean=data_mean,training=False)
                           
     dataloader = torch.utils.data.DataLoader(pp_dataset,batch_size=1,shuffle=False,
-                                             num_workers=1)
+                                             num_workers=0)
 
     gt_box_list   = []
     pred_box_list = []
-
+    class_names = []
     # loop through validation data
     for i,(p,inds) in tqdm(enumerate(dataloader),total=len(pp_dataset)):
-        
+       
         # get model output
         p = p.to(device)
         inds = inds.to(device)
@@ -258,6 +254,7 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
             car_box = move_box_to_car_space(box,image=False)
             box_dict = make_box_dict(car_box,token_list[i],score=False)
             gt_box_list.append(box_dict)
+            class_names.append(box.name)
 
         # loop through anchor boxes and create pred_box_list to pass
         # to lyft_dataset_sdk evaluation function
@@ -269,15 +266,16 @@ def evaluate(pp_model,anchor_box_list,data_mean,device):
         gc.collect()
 
     map_list = []
+    class_names = list(set(class_names))
     # get the average precision for each iou threshold - evaluation score
     # is the mean across all thresholds
     for thresh in cfg.DATA.VAL_THRESH_LIST:
         thresh_ap = get_average_precisions(gt_box_list,pred_box_list,
-                                           cfg.DATA.CLASS_NAMES,thresh)
+                                           class_names,thresh)
         map_list.append(np.mean(thresh_ap))
 
     
-    return np.mean(map_list)
+    return map_list
 
 def write_submission(boxes):
     """
