@@ -36,12 +36,6 @@ class PPLoss(nn.Module):
         cls_targets = cls_targets.reshape(cls_size[0],-1)
         # compute the p vector for focal loss
         p           = torch.sigmoid(cls_tensor)
-        """
-        ct          = cls_targets.reshape(cls_size[0],cls_size[1],
-                                          cls_size[2],cfg.DATA.NUM_ANCHORS,
-                                          cfg.DATA.NUM_CLASSES)*self.cls_weights
-        ct          = ct.reshape(cls_size[0],-1)
-        """
         pt          = torch.where(cls_targets == 1,p,1-p)
         at          = torch.where(cls_targets == 1,torch.Tensor([25]).to(self.device),torch.Tensor([1]).to(self.device))
         #at          = torch.where(cls_targets == 1,ct,torch.ones(pt.size(),device=self.device))

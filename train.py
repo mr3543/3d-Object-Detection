@@ -128,7 +128,7 @@ print('STARTING TRAINING')
 
 map_list = []
 
-epoch_start = 12
+epoch_start = 0
 for epoch in range(epoch_start,epochs):
     print('EPOCH: ',epoch)
     epoch_losses = []
