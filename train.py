@@ -108,19 +108,6 @@ if load_model:
 
 else:
 
-    """
-    #LSUV INIT
-    (p,i,_,__) = next(iter(dataloader))
-    p = p.to(device)
-    i = i.to(device)
-
-    pp_model.feature_net = LSUVinit(pp_model.feature_net,p,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
-    feature_out = pp_model.feature_net(p)
-    scatter_out = pp_model.scatter(feature_out,i)
-    pp_model.backbone = LSUVinit(pp_model.backbone,scatter_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
-    backbone_out = pp_model.backbone(scatter_out)
-    pp_model.det_head = LSUVinit(pp_model.det_head,backbone_out,needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = False)
-    """
 # set last layer bias for focal loss init
     pi = 0.01
     pp_model.det_head.cls.bias.data.fill_(-np.log((1-pi)/pi))
@@ -171,18 +158,6 @@ for epoch in range(epoch_start,epochs):
             print('reg wgt: ',b_reg*r_loss)
             print('ort wgt: ',b_ort*o_loss)
             print('-------------------------------------------------')
-            """
-            epoch_losses.append(float(batch_loss.detach().cpu()))
-            epoch_cls_losses.append(float(c_loss.detach().cpu()))
-            pos_anchor_preds = torch.where(scores.detach() > 0.5,torch.Tensor([1]).to(device),torch.Tensor([0]).to(device))
-            pos_anchor_preds = pos_anchor_preds.reshape(-1).cpu().numpy()
-            pos_anchors      = c_target.detach().reshape(batch_size,-1).reshape(-1).cpu().numpy()
-            targ_names = ['neg','pos']
-            print(classification_report(pos_anchors,pos_anchor_preds,target_names=targ_names))
-            print('num pos preds: ', sum(pos_anchor_preds))
-            print('num pos anchs: ', sum(pos_anchors))
-            token = token_list[i*2]
-            """
             token = token_list[batch_size*i]
             mAP = evaluate_single(cls_tensor[0,...][None,...].detach(),reg_tensor[0,...][None,...].detach(),token,anchor_boxes,data_dict)
             print('mAP: ',mAP)
