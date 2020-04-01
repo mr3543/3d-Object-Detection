@@ -1,6 +1,6 @@
 ## 3D object Detection for Autonomous Driving
 
-This repo implements a verison of [PointPillars](https://arxiv.org/abs/1812.05784) for detecting objects in 3d lidar point clouds. Our dataset is the [Lyft Level 5](https://level5.lyft.com/dataset/) dataset which contains over 17,000 lidar sweeps and full sensor readings. The full dataset is over 80gb. 
+This repo implements a verison of [PointPillars](https://arxiv.org/abs/1812.05784) for detecting objects in 3d lidar point clouds. Our dataset is the [Lyft Level 5](https://level5.lyft.com/dataset/) dataset which contains over 17,000 lidar sweeps and full sensor readings. The full dataset is over 200gb. 
 
 ## Dataset Overview
 
